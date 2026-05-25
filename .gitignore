@@ -11,8 +11,9 @@ coverage/
 target/
 **/*.rs.bk
 Cargo.lock.bak
-# Note: web/pachinko-game.wasm IS committed (the playable artifact).
-# Drop the line below if you'd rather only ship source.
+# Note: docs/pachinko-game.wasm IS committed (the playable artifact
+# served by GitHub Pages). Drop it from tracking if you'd rather only
+# ship source — `git rm --cached docs/pachinko-game.wasm` + add a line.
 
 # --- secrets & credentials (defense in depth) ---
 # Never commit these, even if a contributor mistakenly creates them.
