@@ -83,6 +83,13 @@ persistence and BGM crossfade primitives didn't materialize. The "every R cites 
 discipline turned what could have been ad-hoc scope-cut into a structured platform-notes
 section. Pre-existing structure paid off.
 
+### B-8 — `C-N` citation discipline survives a panic-driven debug session  *(2026-05-25, post-deploy fix)*
+After shipping a broken WASM (black canvas in real browsers), I had to make 4 root-cause
+fixes in quick succession: audio feature flag, pre-render-before-await, JS shim version,
+graceful audio-load fallback. The commit message wrote itself because every change traced
+to a specific constraint (`C-1` purity, `C-6` determinism, `C-13` WASM target, `C-14` Rust
++macroquad stack). The discipline didn't slow the fix; it organized it.
+
 ### B-7 — TDD discipline produced a green math layer first try  *(2026-05-25, build)*
 Writing all 21 tests (PE + CC + reach + save) *before* shipping the math layer caught one
 real spec inconsistency: the PRD's reach-frequency table didn't reconcile to 1/199.8 by
@@ -107,6 +114,15 @@ and blocks if a `severity: "block"` nudge fires. Would close the loop between
 ---
 
 ## Issues (cont.)
+
+### I-7 — Discipline says nothing about WASM-specific failure modes  *(2026-05-25, post-deploy fix)*
+The 4 black-screen bugs (audio feature, await-before-frame, JS shim mismatch, panic-on-
+audio-fail) are exactly the kind of WASM-specific failure modes a nudge engine *should*
+catch — they're not test-failures (the math layer was 21/21 green) and not architectural
+drift, but they're deployment-blocking. A `nudge_wasm_smoke` detector that fires when a
+WASM target builds but a headless-browser smoke test never reaches the second frame
+would have saved a deploy cycle. Suggested category: "platform readiness" — adjacent to
+nudge dimensions but not currently one.
 
 ### I-6 — Without the MCP server wired, the discipline is documentation-only  *(2026-05-25, build)*
 `magnetfragnet stats` shows 0 iterations after a full TDD session that produced 21 green
