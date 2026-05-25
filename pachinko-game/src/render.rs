@@ -136,7 +136,7 @@ impl RenderState {
     }
 }
 
-pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining: u32, spins_since_jp: u32, last_jp_history: &[u32], unlocked_chapter: u32) {
+pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining: u32, spins_since_jp: u32, last_jp_history: &[u32], unlocked_chapter: u32, balls_won: u64, total_jackpots: u32) {
     clear_background(Color::from_rgba(8, 6, 16, 255));
 
     let sw = screen_width();
@@ -186,7 +186,9 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
     } else {
         draw_rectangle(lcd_x, lcd_y, lcd_w, 30.0, Color::from_rgba(40, 30, 60, 180));
         draw_text("PACHINKO  ::  THE REVENGE", lcd_x + 10.0, lcd_y + 22.0, 22.0, GOLD);
-        draw_text(&format!("CH {unlocked_chapter}"), lcd_x + lcd_w - 80.0, lcd_y + 22.0, 22.0, WHITE);
+        // chapter shown in the top-left session-stats line and announced via overlay
+        // on advance — no need to duplicate it here under the data lamp.
+        let _ = unlocked_chapter;
     }
 
     // Reels (3, equally spaced)
@@ -267,8 +269,8 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
     draw_circle_lines(chuck_cx, chuck_cy, 24.0, 2.0, BLACK);
     draw_text("HESO", chuck_cx - 22.0, chuck_cy + 6.0, 18.0, BLACK);
 
-    // Data lamp HUD (top right)
-    draw_data_lamp(sw - 240.0 - 8.0, 8.0, 240.0, 160.0, spins_since_jp, last_jp_history, cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach, kakuhen_remaining);
+    // Data lamp HUD (top right). Made taller to fit BALLS WON + JP count.
+    draw_data_lamp(sw - 260.0 - 8.0, 8.0, 260.0, 196.0, spins_since_jp, last_jp_history, cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach, kakuhen_remaining, balls_won, total_jackpots);
 
     // Particles (jackpot confetti)
     for p in &rs.particles {
@@ -361,18 +363,26 @@ fn draw_reel(x: f32, y: f32, w: f32, h: f32, offset: f32, target: Option<u8>) {
     draw_rectangle(x - 4.0, y + h, w + 8.0, 6.0, Color::from_rgba(20, 12, 28, 255));
 }
 
-fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32) {
+fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32, balls_won: u64, total_jackpots: u32) {
     draw_rectangle(x, y, w, h, Color::from_rgba(30, 20, 60, 230));
     draw_rectangle_lines(x, y, w, h, 2.0, GOLD);
     draw_text("DATA  LAMP", x + 8.0, y + 22.0, 18.0, GOLD);
     draw_text("v0.1", x + w - 36.0, y + 22.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
-    draw_text(&format!("SPINS {spins_since:>4}"), x + 8.0, y + 50.0, 24.0, WHITE);
-    let label = if in_kakuhen { format!("KAKUHEN ST {remaining}") } else { "BASE PLAY".into() };
-    draw_text(&label, x + 8.0, y + 78.0, 20.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
 
-    // History bars
-    let bar_y = y + 96.0;
-    let max_bar_h = 50.0;
+    // Big SPINS (since last JP). The "ハマり" counter regulars hunt.
+    draw_text(&format!("SPINS  {spins_since:>4}"), x + 8.0, y + 52.0, 22.0, WHITE);
+
+    // State badge.
+    let label = if in_kakuhen { format!("KAKUHEN  ST {remaining}") } else { "BASE PLAY".into() };
+    draw_text(&label, x + 8.0, y + 78.0, 18.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
+
+    // Score: total JPs + balls won this session.
+    draw_text(&format!("JACKPOTS  {total_jackpots:>3}"), x + 8.0, y + 104.0, 16.0, Color::from_rgba(255, 220, 130, 255));
+    draw_text(&format!("BALLS WON  {balls_won}"), x + 8.0, y + 124.0, 16.0, Color::from_rgba(255, 220, 130, 255));
+
+    // History bars (last 10 JP gaps).
+    let bar_y = y + 144.0;
+    let max_bar_h = 38.0;
     let bar_w = (w - 16.0) / 10.0;
     let max_v = history.iter().copied().max().unwrap_or(1).max(1);
     for (i, &v) in history.iter().take(10).enumerate() {
@@ -382,5 +392,5 @@ fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u
         let c = if v > 500 { Color::from_rgba(255, 80, 80, 255) } else { Color::from_rgba(120, 200, 255, 255) };
         draw_rectangle(bx + 2.0, by, bar_w - 4.0, bh, c);
     }
-    draw_text("last 10 JP gap", x + 8.0, y + h - 4.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.6));
+    draw_text("last 10 jp-gap", x + 8.0, y + h - 4.0, 12.0, Color::new(1.0, 1.0, 1.0, 0.55));
 }

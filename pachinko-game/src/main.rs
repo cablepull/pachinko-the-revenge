@@ -66,8 +66,10 @@ async fn main() {
     let mut fanfare_timer: f32 = 0.0;
 
     let mut prev_state = session.coord.state;
+    let mut prev_chapter = session.state.unlocked_chapter;
     let mut last_jp_history: Vec<u32> = Vec::new();
     let mut spins_at_last_jp: u32 = 0;
+    let mut balls_won_total: u64 = 0;
 
     let mut launch_cooldown: f32 = 0.0;
     let mut session_start_time = get_time();
@@ -132,11 +134,12 @@ async fn main() {
                             audio::play_loop(&bank.reach_bgm, 0.75);
                             current_bgm = BgmTrack::Reach;
                         }
-                        // Show banner text
+                        // Show banner text — tier name + a tiny story hint per tier.
+                        // (Players learn the hierarchy by watching which one fires.)
                         match tier {
-                            ReachTier::Calm => rs.show_overlay("REACH . . .", dur),
-                            ReachTier::Mid => rs.show_overlay("REACH !!", dur),
-                            ReachTier::Premium => rs.show_overlay("PREMIUM REACH !!!", dur),
+                            ReachTier::Calm => rs.show_overlay("CALM REACH  ::  flashback", dur),
+                            ReachTier::Mid => rs.show_overlay("MID REACH  ::  preparing", dur),
+                            ReachTier::Premium => rs.show_overlay("PREMIUM REACH  ::  the confrontation", dur),
                             ReachTier::Confirmed => {
                                 rs.show_overlay("<<  IT  ENDS  TONIGHT  >>", dur);
                                 audio::play_one(&bank.confirmed_cue, 1.0);
@@ -148,12 +151,13 @@ async fn main() {
                 SessionEvent::JackpotStart => {
                     rs.snap_reels([7, 7, 7]);
                     rs.flash(0.5);
-                    rs.show_overlay("F E V E R !!", 2.5);
+                    let payout = session.spec.rounds_per_jackpot as u64 * session.spec.balls_per_round as u64;
+                    balls_won_total += payout;
+                    rs.show_overlay(format!("F E V E R !!   +{payout} BALLS"), 2.8);
                     audio::play_one(&bank.hit_fanfare, 1.0);
                     audio::play_one(&bank.jackpot_fanfare, 1.0);
                     fanfare_timer = 6.0;
                     rs.spawn_jackpot_particles(screen_width() * 0.5, screen_height() * 0.5);
-                    // Record JP gap
                     let gap = session.state.total_spins as u32 - spins_at_last_jp;
                     spins_at_last_jp = session.state.total_spins as u32;
                     last_jp_history.insert(0, gap);
@@ -191,6 +195,18 @@ async fn main() {
             prev_state = session.coord.state;
         }
 
+        // Chapter advancement — announce the new story beat.
+        if session.state.unlocked_chapter > prev_chapter {
+            prev_chapter = session.state.unlocked_chapter;
+            let label = match prev_chapter {
+                2 => "CHAPTER 2  ::  sharpening the blade",
+                3 => "CHAPTER 3  ::  tracked to the warehouse",
+                4 => "CHAPTER 4  ::  it ends tonight",
+                _ => "NEW CHAPTER UNLOCKED",
+            };
+            rs.show_overlay(label.to_string(), 3.0);
+        }
+
         // ---- DRAW ----
         let kak_remaining = if matches!(session.coord.state, CabinetState::KakuhenBase | CabinetState::KakuhenReach) {
             session.spec.st_window.saturating_sub(session.coord.kakuhen_window_spins)
@@ -203,14 +219,17 @@ async fn main() {
             session.spins_since_last_jackpot(),
             &last_jp_history,
             session.state.unlocked_chapter,
+            balls_won_total,
+            session.state.total_jackpots,
         );
 
         // Session stats overlay (small text top-left below state)
         draw_text(
-            &format!("spins {}  /  JP {}  /  chapter {}",
+            &format!("spins {}  /  JP {}  /  chapter {}  /  balls won {}",
                 session.state.total_spins,
                 session.state.total_jackpots,
-                session.state.unlocked_chapter),
+                session.state.unlocked_chapter,
+                balls_won_total),
             14.0, 44.0, 16.0,
             Color::new(0.6, 0.85, 1.0, 0.8),
         );
