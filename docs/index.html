@@ -2,57 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Pachinko: The Revenge</title>
+    <title>Pachinko: The Revenge — iterations</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Original-IP digital pachinko cabinet, modern CR-style with ST kakuhen. Built in Rust + macroquad, compiled to WebAssembly. The reach hierarchy is the story.">
+    <meta name="description" content="Pachinko: The Revenge — playable WASM iterations of an original-IP CR-style pachinko cabinet. Rust + macroquad.">
     <meta name="theme-color" content="#06040c">
     <meta property="og:title" content="Pachinko: The Revenge">
-    <meta property="og:description" content="Original-IP digital pachinko cabinet — the reach hierarchy is the story. Rust + macroquad → WASM.">
+    <meta property="og:description" content="Original-IP digital pachinko cabinet — playable iterations.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://cablepull.github.io/pachinko-the-revenge/">
     <meta name="twitter:card" content="summary">
 
     <style>
+        :root {
+            color-scheme: dark;
+        }
         html, body {
             margin: 0; padding: 0;
             background: #06040c;
             color: #ddc;
             font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-            min-height: 100%; width: 100%;
+            min-height: 100vh; width: 100%;
         }
         body {
             display: flex; flex-direction: column;
             align-items: center; justify-content: flex-start;
-            min-height: 100vh; padding: 16px 12px 24px;
+            padding: 60px 24px 40px;
             box-sizing: border-box;
         }
+        .wrap {
+            max-width: 720px;
+            width: 100%;
+        }
         h1 {
-            font-size: 20px; margin: 6px 0 4px;
-            color: #f3b54a; letter-spacing: 6px; text-transform: uppercase;
+            font-size: 26px; margin: 0 0 6px;
+            color: #f3b54a; letter-spacing: 8px; text-transform: uppercase;
+            text-align: center;
         }
-        .sub {
-            font-size: 11px; color: #998877;
-            margin-bottom: 14px; letter-spacing: 3px; text-transform: uppercase;
+        .tagline {
+            font-size: 12px; color: #998877;
+            letter-spacing: 3px; text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 38px;
         }
-        #glcanvas {
-            display: block; margin: 0 auto;
-            border: 2px solid #5a3a18;
-            box-shadow: 0 0 48px rgba(220, 160, 50, 0.28);
-            background: #06040c; outline: none;
-            max-width: 100%; height: auto;
+        .blurb {
+            color: #aa9; font-size: 14px;
+            line-height: 1.6;
+            margin: 0 0 32px;
+            border-left: 2px solid #5a3a18;
+            padding: 4px 0 4px 18px;
         }
-        .controls {
-            margin-top: 12px; font-size: 12px; color: #aa9;
-            letter-spacing: 1px; text-align: center;
+        .blurb em { color: #c79858; font-style: normal; }
+        h2 {
+            color: #c79858;
+            font-size: 13px; letter-spacing: 4px;
+            text-transform: uppercase;
+            margin: 24px 0 12px;
+            border-bottom: 1px dotted #3a2a18;
+            padding-bottom: 6px;
         }
-        kbd {
-            background: #2a1f1a; border: 1px solid #5a3a18;
-            border-radius: 3px; padding: 1px 6px;
-            color: #f3b54a; font-family: ui-monospace, SFMono-Regular, monospace;
-            font-size: 11px;
+        ul.iterations {
+            list-style: none;
+            padding: 0; margin: 0;
+        }
+        ul.iterations li {
+            background: linear-gradient(180deg, #14080c 0%, #0c0610 100%);
+            border: 1px solid #2a1f18;
+            margin: 0 0 14px;
+            padding: 18px 22px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        ul.iterations li:hover {
+            border-color: #5a3a18;
+            box-shadow: 0 0 28px rgba(220, 160, 50, 0.14);
+        }
+        ul.iterations a.title-link {
+            color: #f3b54a;
+            font-size: 18px;
+            text-decoration: none;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        ul.iterations a.title-link:hover { color: #ffe070; }
+        ul.iterations .meta {
+            font-size: 11px; color: #6a5a48;
+            letter-spacing: 2px; text-transform: uppercase;
+            margin: 4px 0 12px;
+        }
+        ul.iterations .desc {
+            color: #aa9; font-size: 13px; line-height: 1.55;
+            margin: 0;
+        }
+        ul.iterations .tags {
+            margin-top: 12px;
+        }
+        ul.iterations .tags span {
+            display: inline-block;
+            background: #2a1f1a; color: #c79858;
+            border: 1px solid #5a3a18;
+            padding: 2px 8px;
+            margin: 0 4px 4px 0;
+            font-size: 10px; letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-family: ui-monospace, SFMono-Regular, monospace;
+        }
+        ul.iterations .play-cta {
+            display: inline-block;
+            margin-top: 14px;
+            background: #2a1f1a; color: #f3b54a;
+            border: 1px solid #5a3a18;
+            padding: 8px 18px;
+            text-decoration: none;
+            font-size: 12px; letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+        ul.iterations .play-cta:hover {
+            background: #3a2a1f; color: #ffe070;
+        }
+        ul.iterations li.placeholder {
+            border-style: dashed; opacity: 0.55;
+        }
+        ul.iterations li.placeholder .title {
+            color: #6a5a48;
+            font-size: 18px; letter-spacing: 4px; text-transform: uppercase;
         }
         footer {
-            margin-top: 18px; font-size: 11px; color: #6a5a48;
+            margin-top: 60px; font-size: 11px; color: #6a5a48;
             letter-spacing: 1px; text-align: center;
         }
         footer a {
@@ -60,205 +135,69 @@
             border-bottom: 1px dotted #5a3a18;
         }
         footer a:hover { color: #f3b54a; }
-
-        #help-button {
-            position: fixed; top: 14px; right: 18px;
-            width: 30px; height: 30px;
-            background: #2a1f1a; border: 1px solid #5a3a18;
-            border-radius: 50%;
-            color: #f3b54a;
-            font-family: ui-serif, Georgia, serif;
-            font-size: 18px; font-weight: bold;
-            cursor: pointer; z-index: 50;
-            display: flex; align-items: center; justify-content: center;
-            user-select: none;
-        }
-        #help-button:hover {
-            background: #3a2a1f; color: #ffe070;
-        }
-
-        /* Modal overlay: intro and help share styles */
-        .overlay {
-            position: fixed; inset: 0;
-            background: rgba(6, 4, 12, 0.95);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 99;
-            backdrop-filter: blur(4px);
-        }
-        .overlay .panel {
-            max-width: 760px; width: 92%;
-            border: 1px solid #5a3a18;
-            background: linear-gradient(180deg, #14080c 0%, #0c0610 100%);
-            padding: 28px 36px 24px;
-            color: #ddc;
-            font-size: 14px; line-height: 1.55;
-            box-shadow: 0 0 60px rgba(220, 160, 50, 0.22);
-        }
-        .overlay h2 {
-            color: #f3b54a;
-            font-size: 22px; letter-spacing: 5px;
-            text-transform: uppercase;
-            margin: 0 0 4px;
-        }
-        .overlay h3 {
-            color: #c79858;
-            font-size: 13px; letter-spacing: 3px;
-            text-transform: uppercase;
-            margin: 22px 0 6px;
-            border-bottom: 1px dotted #3a2a18;
-            padding-bottom: 4px;
-        }
-        .overlay .lead {
-            color: #aa9;
-            font-size: 12px; letter-spacing: 2px;
-            margin-bottom: 14px;
-        }
-        .overlay p { margin: 6px 0; }
-        .overlay ul {
-            list-style: none; padding: 0; margin: 4px 0 0;
-        }
-        .overlay ul li {
-            padding: 4px 0;
-            border-bottom: 1px dotted #2a1f18;
-        }
-        .overlay ul li:last-child { border-bottom: none; }
-        .overlay .label {
-            display: inline-block; min-width: 130px;
-            color: #f3b54a;
-            font-family: ui-monospace, SFMono-Regular, monospace;
-            font-size: 12px;
-        }
-        .overlay .dismiss {
-            display: block; margin: 20px auto 4px;
-            background: #2a1f1a; color: #f3b54a;
-            border: 1px solid #5a3a18;
-            padding: 10px 28px;
-            font-size: 13px; letter-spacing: 5px;
-            text-transform: uppercase;
-            cursor: pointer; font-family: inherit;
-        }
-        .overlay .dismiss:hover {
-            background: #3a2a1f; color: #ffe070;
-        }
-        .overlay .hint {
-            margin-top: 14px;
-            font-size: 10px; color: #5a4838;
-            letter-spacing: 3px; text-transform: uppercase;
-            text-align: center;
-        }
-        .overlay .footnote {
-            margin-top: 14px;
-            color: #6a5a48; font-size: 11px; line-height: 1.5;
-            font-style: italic;
-        }
-        noscript {
-            display: block; margin: 40px auto;
-            padding: 16px 22px;
-            border: 1px solid #5a3a18;
-            color: #f3b54a; background: #14080c;
-            font-size: 13px; max-width: 520px; text-align: center;
-        }
     </style>
 </head>
 <body>
-    <h1>Pachinko · The Revenge</h1>
-    <div class="sub">an original revenge cabinet · CR-style · ST kakuhen</div>
+    <div class="wrap">
+        <h1>Pachinko · The Revenge</h1>
+        <div class="tagline">an original revenge cabinet · CR-style · ST kakuhen</div>
 
-    <noscript>This demo needs JavaScript and WebAssembly enabled.</noscript>
+        <p class="blurb">
+            A single, deeply-realized digital pachinko cabinet — modern CR-style with ST kakuhen — in which an original revenge narrative is delivered <em>through the reach hierarchy itself</em>. The reach tiers map to plot beats: provocation, preparation, confrontation, catharsis. Players learn the plot by playing; the plot teaches them the reach taxonomy. Built in Rust + macroquad, compiled to WebAssembly.
+        </p>
 
-    <canvas id="glcanvas" tabindex='1' width="1100" height="800"></canvas>
+        <h2>Playable iterations</h2>
+        <ul class="iterations">
+            <li>
+                <a class="title-link" href="iteration1/">Iteration 1 &nbsp;—&nbsp; MVP cabinet</a>
+                <div class="meta">2026-05-25 · ~481 KB WASM · single machine, single arc</div>
+                <p class="desc">
+                    The headless math layer (21 green tests including Monte Carlo against the
+                    canonical 1/199.8 base / 1/35.9 kakuhen / 70% ST-entry spec sheet),
+                    wrapped with macroquad rendering, procedurally-synthesized audio, animated
+                    reels with staggered stops, the four-tier reach hierarchy (calm / mid /
+                    premium / confirmed), 165-spin ST kakuhen window, story-gated reach
+                    eligibility, and a data-lamp HUD that tracks spins-since-jackpot,
+                    jackpot count, balls won, and the last 10 jackpot intervals.
+                </p>
+                <div class="tags">
+                    <span>Rust</span><span>macroquad</span><span>WASM</span>
+                    <span>4 reach tiers</span><span>ST kakuhen</span>
+                    <span>procedural audio</span>
+                </div>
+                <a class="play-cta" href="iteration1/">Play →</a>
+            </li>
 
-    <div class="controls">
-        <kbd>SPACE</kbd> or <kbd>CLICK</kbd> — pull chucker (hold for auto-fire) &nbsp;·&nbsp;
-        <kbd>H</kbd> — help &nbsp;·&nbsp;
-        <kbd>R</kbd> — reset session
+            <li class="placeholder">
+                <div class="title">Iteration 2 &nbsp;—&nbsp; (planned)</div>
+                <div class="meta">TBD</div>
+                <p class="desc">
+                    Likely candidates: CJK-capable font subset, smoother BGM crossfades, full
+                    voice-acted reach cinematics, persistence via localStorage, the writer's
+                    pass on the story bible, and the long catharsis confirmed-reach animation.
+                </p>
+            </li>
+        </ul>
+
+        <h2>The project</h2>
+        <p class="blurb" style="border-color:#2a1f18;">
+            Authentic Japanese pachinko grammar (mixed-script overlays, brass-fanfare
+            catharsis, shounen-anime cut-in animation, original-cast JP voice), but original
+            IP. Not a parody, not a Westernized reinterpretation. The cabinet, sound design,
+            parlor framing should pass a 常連 (regular) sniff test. 12 numbered constraints
+            in <code>intent.md</code>, 23 numbered rules in the PRD citing those constraints,
+            and a discipline-shaped feedback log on the tooling used to build it.
+        </p>
+
+        <footer>
+            <a href="https://github.com/cablepull/pachinko-the-revenge" target="_blank" rel="noopener">source</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/cablepull/pachinko-the-revenge/blob/main/intent.md" target="_blank" rel="noopener">intent.md</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/cablepull/pachinko-the-revenge/blob/main/prd/001-mvp-pachinko-cabinet.md" target="_blank" rel="noopener">PRD</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/cablepull/pachinko-the-revenge/blob/main/MAGNETFRAGNET_FEEDBACK.md" target="_blank" rel="noopener">feedback</a>
+        </footer>
     </div>
-
-    <footer>
-        Rust + macroquad → WebAssembly &nbsp;·&nbsp;
-        <a href="https://github.com/cablepull/pachinko-the-revenge" target="_blank" rel="noopener">source on GitHub</a> &nbsp;·&nbsp;
-        <a href="https://github.com/cablepull/pachinko-the-revenge/blob/main/intent.md" target="_blank" rel="noopener">intent.md</a> &nbsp;·&nbsp;
-        <a href="https://github.com/cablepull/pachinko-the-revenge/blob/main/prd/001-mvp-pachinko-cabinet.md" target="_blank" rel="noopener">PRD</a>
-    </footer>
-
-    <button id="help-button" title="How to play" aria-label="How to play">?</button>
-
-    <div id="help-overlay" class="overlay" style="display: flex;">
-        <div class="panel">
-            <h2>How to play</h2>
-            <div class="lead">If you've never seen a Japanese pachinko machine, here's everything you need.</div>
-
-            <h3>The premise</h3>
-            <p>You're sitting at a digital pachinko cabinet. Hold the chucker knob (<kbd>SPACE</kbd>); the machine fires balls in a continuous stream. Most balls miss. Occasionally one lands in the central <b>chucker</b> (the gold cup labelled HESO), which triggers a reel spin. Match figures across the reels and you hit a <b>jackpot</b> — the attacker doors open and a fixed payout follows.</p>
-            <p>That's the whole loop. The texture is in <em>between</em>: each spin can escalate into a <b>reach</b> — an animation that telegraphs "this might be the one" — and the longer/louder the reach, the higher the chance the reels actually line up.</p>
-
-            <h3>What you'll see on screen</h3>
-            <ul>
-                <li><span class="label">3 reels (LCD)</span> the result is the middle row. Three matching figures = jackpot. Three matching 7s = FEVER.</li>
-                <li><span class="label">REACH banners</span> a spin escalated. Calm = polite tease (~2% hit). Mid = real chance (~25%). Premium = serious (~70%). Confirmed = almost certain (~95%).</li>
-                <li><span class="label">ATTACKER</span> the door below the LCD. Opens during a jackpot to receive the payout. ~1,440 balls per 16-round jackpot.</li>
-                <li><span class="label">KAKUHEN</span> a 165-spin "chance time" window most jackpots enter. Jackpot rate jumps from 1/200 to 1/36. Cabinet tint turns red. Don't waste it.</li>
-                <li><span class="label">DATA LAMP</span> top-right HUD: spins since last jackpot (regulars hunt machines with high counts), kakuhen status, the last 10 jackpot intervals.</li>
-                <li><span class="label">CHAPTER</span> the revenge plot advances with each jackpot. New chapter = new reach animations unlocked.</li>
-            </ul>
-
-            <h3>The math (real spec sheet)</h3>
-            <ul>
-                <li><span class="label">Base jackpot</span> 1 / 199.8 per spin</li>
-                <li><span class="label">Kakuhen jackpot</span> 1 / 35.9 per spin</li>
-                <li><span class="label">Kakuhen entry</span> 70% of jackpots enter kakuhen</li>
-                <li><span class="label">ST window</span> 165 spins, deterministic</li>
-                <li><span class="label">Payout</span> 16 rounds × ~90 balls = ~1,440 per jackpot</li>
-            </ul>
-
-            <h3>What you should be doing</h3>
-            <p>Hold <kbd>SPACE</kbd>. Watch for reaches. Get to kakuhen. Try to chain jackpots inside the 165-spin window before it expires. Unlock all four chapters.</p>
-
-            <p class="footnote">There is no money, no leaderboard, no save-across-sessions yet. This is a single-cabinet study in pachinko grammar.  Press <kbd>H</kbd> to bring this panel back any time.</p>
-
-            <button class="dismiss" id="dismiss-help">Start playing</button>
-            <div class="hint">⚙  WebAssembly build · ~480 KB · audio unlocks on first interaction</div>
-        </div>
-    </div>
-
-    <script src="mq_js_bundle.js"></script>
-    <script>
-        load("pachinko-game.wasm");
-
-        // Note: `canvas` is a global already declared by mq_js_bundle.js — don't redeclare.
-        const overlay = document.getElementById("help-overlay");
-        const helpBtn = document.getElementById("help-button");
-        const dismissBtn = document.getElementById("dismiss-help");
-        const glCanvas = document.getElementById("glcanvas");
-
-        let firstStart = true;
-        const showHelp = () => { overlay.style.display = "flex"; };
-        const dismissHelp = () => {
-            overlay.style.display = "none";
-            if (firstStart) {
-                if (typeof audio !== "undefined" && audio.context && audio.context.state === "suspended") {
-                    audio.context.resume();
-                }
-                firstStart = false;
-            }
-            glCanvas.focus();
-        };
-
-        const overlayOpen = () => overlay.style.display === "flex";
-
-        helpBtn.addEventListener("click", (e) => { e.stopPropagation(); showHelp(); });
-        // Any click on the overlay (backdrop OR panel) dismisses; dismissBtn just provides
-        // an obvious affordance. This is friendlier than requiring a precise backdrop click.
-        overlay.addEventListener("click", () => { dismissHelp(); });
-        document.addEventListener("keydown", (e) => {
-            if (overlayOpen() && (e.key === "Enter" || e.key === "Escape" || e.key === " ")) {
-                e.preventDefault();
-                dismissHelp();
-            } else if (!overlayOpen() && (e.key === "h" || e.key === "H" || e.key === "?")) {
-                e.preventDefault();
-                showHelp();
-            }
-        });
-    </script>
 </body>
 </html>
