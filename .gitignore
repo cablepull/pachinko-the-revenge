@@ -1,0 +1,98 @@
+# --- build artifacts ---
+.magnetfragnet/
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+
+# Rust / Cargo
+target/
+**/*.rs.bk
+Cargo.lock.bak
+# Note: web/pachinko-game.wasm IS committed (the playable artifact).
+# Drop the line below if you'd rather only ship source.
+
+# --- secrets & credentials (defense in depth) ---
+# Never commit these, even if a contributor mistakenly creates them.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/*.schema.key       # in case a schema file has .key in name
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.gpg
+*.asc
+credentials.json
+secrets.json
+.npmrc
+.netrc
+
+# --- local runtime state ---
+# Native save file (PRD R-18 writes here on macOS/Linux/Windows).
+# Contains session progress + RNG seed; not sensitive but per-user.
+pachinko_save.json
+*.save
+*.session
+
+# --- logs ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- backups / swap / temp ---
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+.#*
+\#*\#
+.~lock.*
+
+# --- OS junk ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+*.lnk
+
+# --- editor / IDE ---
+.idea/
+.vscode/
+*.code-workspace
+.vs/
+*.sublime-project
+*.sublime-workspace
+nbproject/
+.history/
+
+# --- Claude Code / agent state ---
+# Per-user settings — skills under .claude/skills/ ARE committed.
+.claude/settings.local.json
+.claude/projects/
+.claude/cache/
+
+# --- archives / large binaries (avoid accidental check-in) ---
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.dmg
+*.iso
+# (re-allow if you need to commit a release zip; do it explicitly with `git add -f`)

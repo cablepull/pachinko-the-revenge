@@ -1,0 +1,21 @@
+[package]
+name = "pachinko-game"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "macroquad-based game shell for pachinko-the-revenge. Wraps pachinko-core with rendering, audio, input, persistence."
+
+[[bin]]
+name = "pachinko-game"
+path = "src/main.rs"
+
+[dependencies]
+pachinko-core = { path = "../pachinko-core", features = ["std"] }
+macroquad = { version = "0.4", default-features = false }
+quad-snd = "0.2"
+serde_json = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+sapp-jsutils = "0.1"
