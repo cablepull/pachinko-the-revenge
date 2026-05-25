@@ -1,0 +1,24 @@
+{
+  "id": "audit-001-cabinet-slot-vs-pachinko-2026-05-25",
+  "title": "Why v0.1 looks like a slot machine, not pachinko",
+  "subtitle": "Architecture audit triggered after 6446 LoC across 6 commits (nudge-9 rolling threshold).",
+  "version": "1.0",
+  "date": "2026-05-25",
+  "analyst": "claude-opus-4-7",
+  "analyticQuestion": "Why does v0.1 of the cabinet present as a slot machine to a casual player, despite the math layer being faithful to a real CR pachinko spec sheet and the intent stating an authentic Japanese pachinko grammar (C-10)? Which hypothesis best explains the gap between intent and visible artifact?",
+  "keyJudgment": {
+    "summary": "The v0.1 implementation is faithful to the PRD's testable rules (R-1..R-13 all green via Monte Carlo) but the PRD itself elided the ball-physics-and-pin-field layer that is half of pachinko's identity per the pachinko-expertise skill (§1). Without that layer, no rendering of the reel-only subset of the cabinet can satisfy intent C-10 (常連-class identification) for non-regulars; the slot-machine reading is the rational reading of what we shipped. The primary cause is a drift between intent C-10 and PRD F-1 scope (H2), compounded by a tension between C-9 (single-deep-machine MVP) and C-10 that v0.1 silently resolved toward C-9 (H5). Iteration 2 must add a visible pin field, a launcher knob, and ball physics in which the chucker is the actual trigger for reel spins, with the reels demoted to a window inside the cabinet face.",
+    "confidence": "high"
+  },
+  "remainingGaps": [
+    "Have not estimated the implementation cost of a 60fps ball-physics + pin-field layer in macroquad/WASM at NFR-1 budget (frame-time p99 < 16.6ms).",
+    "Have not consulted a 常連-class player to confirm whether the failure for non-regulars is primarily visual (no balls) or auditory (procedural synth quality) — could be both.",
+    "Have not measured whether real pachinko users seeing v0.1 would have the same reaction or would tolerate it (the user is the project owner, not a recruited tester).",
+    "Have not evaluated whether re-scoping iteration 2 to add ball physics breaks C-9 (single-machine-MVP discipline) or honors it (still one machine, just more complete)."
+  ],
+  "triggerEvent": [
+    "nudge-9-architecture-audit fired with rolling threshold exceeded: loc_since_last_audit=6446 across files_since_last_audit=6 (configured threshold: 250 loc OR 8 files).",
+    "User feedback: 'Is this a version of pachinko that doesn't use balls? It seems like a slot machine.' (2026-05-25, captured in research/user-feedback-2026-05-25-slot-machine.md)"
+  ],
+  "iterationNumber": 6
+}

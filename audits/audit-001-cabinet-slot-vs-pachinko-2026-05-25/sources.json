@@ -1,0 +1,67 @@
+{
+  "sources": {
+    "S-skill-pachinko": {
+      "title": "pachinko-expertise skill — domain reference",
+      "type": "research",
+      "reliability": "A",
+      "path": ".claude/skills/pachinko-expertise/SKILL.md",
+      "notes": "Authored at project bootstrap. The canonical domain reference; intent.md cites it directly."
+    },
+    "S-prd": {
+      "title": "PRD-001: F-1 MVP Pachinko Cabinet",
+      "type": "research",
+      "reliability": "A",
+      "path": "prd/001-mvp-pachinko-cabinet.md",
+      "commit": "8a795a5",
+      "notes": "Includes 23 rules R-1..R-23 + §Platform notes for v0.1 deferrals."
+    },
+    "S-intent": {
+      "title": "intent.md — 12 constraints, 6 assumptions, 7 open questions",
+      "type": "research",
+      "reliability": "A",
+      "path": "intent.md",
+      "commit": "8a795a5"
+    },
+    "S-prd-platform-notes-commit": {
+      "title": "Commit cfc7532 — log B-8 and I-7 from the WASM black-screen debug",
+      "type": "artifact",
+      "reliability": "A",
+      "path": "MAGNETFRAGNET_FEEDBACK.md",
+      "commit": "cfc7532",
+      "notes": "Platform-notes section was added in the same iteration as the playability fixes — supporting H3's posthoc-justification pattern."
+    },
+    "S-render": {
+      "title": "pachinko-game render.rs — visual layer",
+      "type": "artifact",
+      "reliability": "A",
+      "path": "pachinko-game/src/render.rs"
+    },
+    "S-main": {
+      "title": "pachinko-game main.rs — game shell + input wiring",
+      "type": "artifact",
+      "reliability": "A",
+      "path": "pachinko-game/src/main.rs"
+    },
+    "S-test-pachinko-core": {
+      "title": "pachinko-core unit tests (21 green, including Monte Carlo)",
+      "type": "test",
+      "reliability": "A",
+      "path": "pachinko-core/src/probability.rs",
+      "notes": "Test functions under #[cfg(test)] mod tests. Verified green via cargo test -p pachinko-core --release."
+    },
+    "S-user-feedback": {
+      "title": "User feedback: slot-machine recognition",
+      "type": "research",
+      "reliability": "B",
+      "path": "research/user-feedback-2026-05-25-slot-machine.md",
+      "notes": "Project owner (cablepull) post-Iteration-1 play feedback. Reliability B because it's a single non-expert observation, but credibility 5 because the observer is the highest-stakes stakeholder."
+    },
+    "S-magnetfragnet-stats": {
+      "title": "magnetfragnet nudge_iteration responses (iter 1..6)",
+      "type": "artifact",
+      "reliability": "A",
+      "path": ".tmp/mfn.mjs",
+      "notes": "Driver script under .tmp/; nudge-9 has been the primary every iteration since project start."
+    }
+  }
+}

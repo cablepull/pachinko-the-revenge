@@ -1,0 +1,121 @@
+{
+  "hypothesisIds": ["H1", "H2", "H3", "H4", "H5"],
+  "evidenceFamilies": {
+    "spec": "Specification docs (intent, PRD, skills)",
+    "artifact": "Shipped code / build outputs",
+    "test": "Test results",
+    "user": "External feedback observations"
+  },
+  "evidence": [
+    {
+      "id": "E1",
+      "observation": "pachinko-expertise/SKILL.md §1 defines pachinko as 'a vertical pinball-meets-slot hybrid. Balls (11mm steel) fall through a pin field; landing in the start chucker (中央ヘソ, *heso*) triggers a digital reel spin'. The skill is explicit that the pin field is core, not decoration.",
+      "sourceIds": ["S-skill-pachinko"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 6,
+      "provenance": "Authored at project bootstrap; treated as the project's domain reference.",
+      "diagnosticity": "very-high",
+      "families": ["spec"],
+      "scores": { "H1": -1, "H2": 2, "H3": 1, "H4": 1, "H5": 2 },
+      "notes": "Reading the skill as authoritative, any cabinet without a ball-physics layer fails the skill's definition of pachinko."
+    },
+    {
+      "id": "E2",
+      "observation": "PRD F-1 contains 23 rules (R-1..R-23) covering math, state machine, reach engine, audio/visual coordinator, persistence, HUD, and acceptance targets. ZERO rules reference balls, a pin field, a launcher knob, ball physics, ball trajectory, or chucker-entry-as-input.",
+      "sourceIds": ["S-prd"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "very-high",
+      "families": ["spec"],
+      "scores": { "H1": 2, "H2": 2, "H3": 1, "H4": 0, "H5": 1 },
+      "notes": "Confirms H1 (we built what the PRD asked) AND H2 (the PRD itself omitted ball layer). The two are not mutually exclusive."
+    },
+    {
+      "id": "E3",
+      "observation": "intent.md C-10 mandates: 'A 常連-class consultant must identify the audio identity as pachinko from sound alone within 30 seconds.' The constraint exists at intent level but is not decomposed into any PRD R-N.",
+      "sourceIds": ["S-intent"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "high",
+      "families": ["spec"],
+      "scores": { "H1": -1, "H2": 2, "H3": 1, "H4": 1, "H5": 2 },
+      "notes": "The chain from C-10 → testable PRD rule is broken. R-23 cites C-10 but is itself a human-judged alpha test, not implementable."
+    },
+    {
+      "id": "E4",
+      "observation": "cargo test -p pachinko-core --release reports '21 passed; 0 failed' covering R-1..R-13 with Monte Carlo over 1M spins for base rate, 100k for kakuhen, 10k for entry rate. Zero tests cover the visual identity of the cabinet, ball physics, or the 常連 sniff test.",
+      "sourceIds": ["S-test-pachinko-core"],
+      "sourceType": "test",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "high",
+      "families": ["test"],
+      "scores": { "H1": 1, "H2": 1, "H3": 0, "H4": 2, "H5": 1 },
+      "notes": "Strongly supports H4: 'tests green' was a cherrypicked confidence signal."
+    },
+    {
+      "id": "E5",
+      "observation": "User feedback (project owner, after playing live build): 'Is this a version of pachinko that doesn't use balls? It seems like a slot machine.'",
+      "sourceIds": ["S-user-feedback"],
+      "sourceType": "research",
+      "reliability": "B",
+      "credibility": 5,
+      "provenance": "Direct quote in session 2026-05-25",
+      "diagnosticity": "very-high",
+      "families": ["user"],
+      "scores": { "H1": -2, "H2": 2, "H3": 0, "H4": 1, "H5": 2 },
+      "notes": "Diagnostic because it directly falsifies H1's 'faithful execution = mission accomplished' framing. The owner sees the gap immediately."
+    },
+    {
+      "id": "E6",
+      "observation": "docs/iteration1/index.html + the WASM build render a cabinet whose visible elements are: 3 reels, an LCD title, an 'attacker' rectangle, a static gold circle labeled HESO, a data lamp HUD. No balls are drawn. No pin field is drawn. No launcher knob is drawn. SPACE/click triggers reel spins directly, bypassing any chucker entry mechanic.",
+      "sourceIds": ["S-render", "S-main"],
+      "sourceType": "artifact",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "very-high",
+      "families": ["artifact"],
+      "scores": { "H1": 1, "H2": 2, "H3": 0, "H4": 1, "H5": 1 },
+      "notes": "Direct artifact-level confirmation of the ball-layer omission."
+    },
+    {
+      "id": "E7",
+      "observation": "PRD §Platform notes (added 2026-05-25 in same commit as v0.1 fixes) marks R-14, R-17, R-18..R-20, R-23 as v0.1 deferrals with rationale referencing platform limits of macroquad / quad-snd / WASM. This section was added AFTER the implementation discovered those gaps, not before.",
+      "sourceIds": ["S-prd", "S-prd-platform-notes-commit"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 5,
+      "diagnosticity": "medium",
+      "families": ["spec"],
+      "scores": { "H1": 0, "H2": 0, "H3": 2, "H4": 0, "H5": 1 },
+      "notes": "Diagnostic for H3 (posthoc justification). Mildly supports H5 (tension forced platform compromises)."
+    },
+    {
+      "id": "E8",
+      "observation": "pachinko-game/src/main.rs handles SPACE/click as input that DIRECTLY calls session.pull_chucker(), bypassing any simulated ball trajectory. There is no Ball entity, no Pin entity, no Launcher entity in either pachinko-core or pachinko-game.",
+      "sourceIds": ["S-main"],
+      "sourceType": "artifact",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "high",
+      "families": ["artifact"],
+      "scores": { "H1": 0, "H2": 2, "H3": 0, "H4": 1, "H5": 2 },
+      "notes": "Confirms the missing layer is structural, not just visual — there's no domain object to hang it on."
+    },
+    {
+      "id": "E9",
+      "observation": "magnetfragnet nudge-9-architecture-audit has fired every iteration since the initial commit, with rolling_threshold loc growing from 5273 (iter 2) to 6446 (iter 6). No prior audit has been completed, so the trigger has never reset.",
+      "sourceIds": ["S-magnetfragnet-stats"],
+      "sourceType": "artifact",
+      "reliability": "A",
+      "credibility": 5,
+      "diagnosticity": "low",
+      "families": ["artifact"],
+      "scores": { "H1": 0, "H2": 0, "H3": 0, "H4": 0, "H5": 0 },
+      "notes": "Not diagnostic between hypotheses but documents that this audit is the discipline's first."
+    }
+  ]
+}

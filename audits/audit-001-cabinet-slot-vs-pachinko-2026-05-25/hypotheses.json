@@ -1,0 +1,83 @@
+{
+  "scoreScale": {
+    "+2": "strongly supports",
+    "+1": "supports",
+    "0":  "neutral / not diagnostic",
+    "-1": "contradicts",
+    "-2": "strongly contradicts"
+  },
+  "confidenceScale": {
+    "low": { "weight": 1, "label": "Single signal, easily overturned" },
+    "moderate": { "weight": 2, "label": "Multiple consistent signals, alternatives not ruled out" },
+    "moderate-to-high": { "weight": 3, "label": "Convergent evidence, primary alternatives weakened" },
+    "high": { "weight": 4, "label": "Strong convergent evidence, alternatives unlikely" },
+    "very-high": { "weight": 5, "label": "Multiple independent strong signals, alternatives effectively ruled out" }
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "shortLabel": "Faithful-to-PRD (mundane)",
+      "label": "v0.1 is faithful to the PRD as written; the slot-machine appearance is inherent to a math-and-reach-only scope, not a defect",
+      "description": "The PRD F-1 explicitly defined the MVP as the math layer, state machine, reach engine, audio/visual coordinator, persistence, and HUD — with NO ball-physics rule. R-1..R-23 are all green. The cabinet looks like the reel-window subset of pachinko because that's precisely the subset specified. Ball physics is post-MVP scope and was never promised in v0.1.",
+      "assessment": "True at the level of PRD compliance but does NOT explain why the PRD itself omitted the ball layer. Partially correct: PRD execution was faithful. Incomplete: ignores that intent C-10 cannot be satisfied by PRD compliance alone.",
+      "confidence": "moderate",
+      "counterevidence": [
+        "Intent C-10 (常連 sound-alone test) is not addressable by the PRD as written — the PRD elided what C-10 requires.",
+        "User feedback shows a non-expert can identify the omission, suggesting the PRD's scope was undersized relative to intent's identity claims."
+      ],
+      "tags": ["fit"]
+    },
+    {
+      "id": "H2",
+      "shortLabel": "Spec elision",
+      "label": "The PRD drifted from intent.md C-10 by omitting the ball-physics-and-pin-field layer, even though the pachinko-expertise skill identifies it as core to pachinko's identity",
+      "description": "The pachinko-expertise skill §1 says explicitly that pachinko IS the ball-meets-pin-field PLUS reel layer hybrid. The PRD picks up only the reel layer. This is a drift between intent.md (which references C-10's 常連 audio-identity test and quotes the skill's grammar) and PRD F-1's rule set (which contains no ball or pin entity). The drift is silent — no PRD anti-pattern explicitly flags it.",
+      "assessment": "Strongest explanation. The PRD's R-1..R-23 are necessary but not sufficient for C-10. The user feedback (a basic visual sniff test failing) confirms the drift was visible.",
+      "confidence": "high",
+      "counterevidence": [
+        "The PRD §Platform notes section acknowledges some deferrals (R-14, R-17, R-18..R-20, R-23) but does NOT acknowledge the ball-layer omission — suggesting it wasn't seen as a deferral but as scope.",
+        "Could argue the omission was intentional MVP-shaping rather than drift; H5 captures that variant."
+      ],
+      "tags": ["drift"]
+    },
+    {
+      "id": "H3",
+      "shortLabel": "Post-hoc justification",
+      "label": "The PRD §Platform notes section was retrofitted after implementation found the chosen stack (Rust + macroquad → WASM) couldn't deliver certain rules, rather than honestly dropping those rules",
+      "description": "R-14 (BGM crossfade ≤200ms latency, 800ms crossfade), R-17 (JP voice), R-18..R-20 (WASM persistence), and R-23 (常連 audio test) all received platform notes deferring them to post-MVP. The notes were added AFTER the implementation discovered macroquad lacks crossfade primitives, has no CJK font, lacks localStorage glue, etc. This is a posthoc pattern: the rules were ratified by the implementation rather than the implementation gated by the rules.",
+      "assessment": "Real but lower magnitude than H2. R-14, R-17, R-18..R-20 are all genuine deferrals (acceptable per ADR-style honesty) but the pattern itself is a process smell — the rules should drive the stack choice, not the reverse.",
+      "confidence": "moderate-to-high",
+      "counterevidence": [
+        "The platform notes are at least HONEST — they document the gap rather than silently passing. That's better discipline than not documenting.",
+        "Some rules (R-23) are inherently human-judged and were always going to be alpha-stage; deferring them is not post-hoc but correct."
+      ],
+      "tags": ["posthoc"]
+    },
+    {
+      "id": "H4",
+      "shortLabel": "Test-cherrypick",
+      "label": "We treated 'tested invariants' as a proxy for 'intent satisfied', cherrypicking the measurable subset and quietly setting aside unmeasurable identity claims",
+      "description": "21/21 tests green covers R-1..R-13 (math, state, reach engine, save). It does NOT cover any of the player-experience targets PXT-1..PXT-5, nor C-3 (legibility) under blind test, nor C-10 (常連 audio). The team (me) declared 'playable' on the back of green math tests + visual screenshot inspection, treating the unmeasurable identity targets as 'for later validation'. This is a classic cherrypick: pass the tests we wrote, ignore the ones we didn't.",
+      "assessment": "Real and partially overlapping with H3. The cherrypick is in what we chose to test, which mirrors what the PRD chose to make testable. A discipline that demanded property-based tests for visual identity (e.g., 'rendered cabinet contains <ball entity>') would have caught this earlier.",
+      "confidence": "moderate-to-high",
+      "counterevidence": [
+        "Visual/auditory identity is genuinely hard to unit-test; some deferral to human judgment is unavoidable.",
+        "PXT-1..PXT-5 are explicitly marked 'not unit-testable' in PRD §2 — so the cherrypick was open, not hidden."
+      ],
+      "tags": ["cherrypick"]
+    },
+    {
+      "id": "H5",
+      "shortLabel": "C-9 ↔ C-10 tension",
+      "label": "Intent C-9 (single deep machine, MVP scope) and intent C-10 (常連 audio identity) are in genuine tension; v0.1 resolved the tension toward C-9 (compact deliverable) at the cost of C-10 (authenticity)",
+      "description": "C-9 says 'single machine, single arc, single save — that is the MVP scope'; resists adding more layers. C-10 demands authenticity that requires the ball-and-pin theatre per the skill. Adding ball physics expands the scope of what's in one machine without violating C-9's letter, but it stretches the MVP. The choice of macroquad (C-14) — a 2D immediate-mode graphics lib — biases toward stylized 2D cabinets rather than physics simulations. v0.1 resolved the tension in favor of shipping faster.",
+      "assessment": "Strong explanation and largely complementary to H2. H2 is 'the PRD drifted'; H5 is 'the underlying intents themselves have an unresolved tension, and the drift was the resolution'. Both are partially true. H5 is the more useful framing for iteration 2 because it forces the question: rebalance toward C-10 or honor C-9 and re-tag C-10 as alpha?",
+      "confidence": "high",
+      "counterevidence": [
+        "Adding ball physics to v0.2 does NOT actually break C-9 (still one machine), so the tension may be less than claimed.",
+        "macroquad CAN do simple physics; the bias from C-14 is real but not absolute."
+      ],
+      "tags": ["tension"]
+    }
+  ]
+}
