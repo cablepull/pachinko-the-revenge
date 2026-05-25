@@ -14,6 +14,10 @@ use pachinko_core::outcome::ReachTier;
 pub struct RenderState {
     pub reel_offsets: [f32; 3],
     pub reel_targets: [Option<u8>; 3],
+    /// Rotation speed in digits/sec. Zero = stopped.
+    pub reel_speed: [f32; 3],
+    /// Countdown (sec) until this reel snaps to a target. <= 0 means already stopped.
+    pub reel_stop_at: [f32; 3],
     pub shake_t: f32,
     pub flash_t: f32,
     pub fanfare_t: f32,
@@ -38,7 +42,9 @@ impl RenderState {
     pub fn new() -> Self {
         Self {
             reel_offsets: [0.0; 3],
-            reel_targets: [None; 3],
+            reel_targets: [Some(7), Some(3), Some(1)], // attractive initial pose
+            reel_speed: [0.0; 3],
+            reel_stop_at: [0.0; 3],
             shake_t: 0.0,
             flash_t: 0.0,
             fanfare_t: 0.0,
@@ -50,6 +56,20 @@ impl RenderState {
             last_reach_tier: None,
             current_state_label: "BASE".into(),
         }
+    }
+
+    /// Start a spin animation. Stagger the stops in [t0, t1, t2] seconds.
+    pub fn start_spin(&mut self, stops_in: [f32; 3]) {
+        self.reel_targets = [None; 3];
+        self.reel_speed = [22.0, 19.0, 17.0];
+        self.reel_stop_at = stops_in;
+    }
+
+    /// Snap all reels immediately to the given digits (used on direct hit jackpot).
+    pub fn snap_reels(&mut self, digits: [u8; 3]) {
+        self.reel_targets = [Some(digits[0]), Some(digits[1]), Some(digits[2])];
+        self.reel_speed = [0.0; 3];
+        self.reel_stop_at = [0.0; 3];
     }
 
     pub fn flash(&mut self, dur: f32) { self.flash_t = dur; }
@@ -87,6 +107,24 @@ impl RenderState {
         self.reach_t = (self.reach_t - dt).max(0.0);
         self.round_t = (self.round_t - dt).max(0.0);
         self.overlay_t = (self.overlay_t - dt).max(0.0);
+
+        // Reels — advance offset while spinning, snap when countdown expires.
+        for i in 0..3 {
+            if self.reel_targets[i].is_none() && self.reel_speed[i] > 0.0 {
+                self.reel_offsets[i] += self.reel_speed[i] * dt;
+                self.reel_stop_at[i] -= dt;
+                if self.reel_stop_at[i] <= 0.0 {
+                    // Snap to whichever digit the offset lands near. Add `i` to
+                    // de-correlate so reels don't all land on the same digit
+                    // unless explicitly snapped via snap_reels().
+                    let digit = ((self.reel_offsets[i] as i32 + (i as i32) * 3).rem_euclid(10)) as u8;
+                    self.reel_targets[i] = Some(digit);
+                    self.reel_speed[i] = 0.0;
+                    self.reel_stop_at[i] = 0.0;
+                }
+            }
+        }
+
         let g = 350.0;
         for p in self.particles.iter_mut() {
             p.x += p.vx * dt;
@@ -139,14 +177,16 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
     draw_rectangle_lines(lcd_x, lcd_y, lcd_w, lcd_h, 4.0, Color::from_rgba(255, 200, 0, 255));
 
     // Title overlay strip
+    // (Japanese chars deferred: macroquad's default font has no CJK glyphs and
+    //  embedding Noto Sans JP would 10x the WASM size. TODO: subset font.)
     if cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach {
         draw_rectangle(lcd_x, lcd_y, lcd_w, 30.0, Color::from_rgba(255, 50, 80, 200));
-        draw_text("ST KAKUHEN MODE!!  --  CHANCE TIME!!", lcd_x + 10.0, lcd_y + 22.0, 22.0, WHITE);
-        draw_text(&format!("REMAINING: {kakuhen_remaining:>3}"), lcd_x + lcd_w - 180.0, lcd_y + 22.0, 22.0, WHITE);
+        draw_text("ST KAKUHEN MODE  ::  CHANCE TIME", lcd_x + 10.0, lcd_y + 22.0, 22.0, WHITE);
+        draw_text(&format!("ST {kakuhen_remaining:>3}"), lcd_x + lcd_w - 110.0, lcd_y + 22.0, 22.0, WHITE);
     } else {
         draw_rectangle(lcd_x, lcd_y, lcd_w, 30.0, Color::from_rgba(40, 30, 60, 180));
-        draw_text("PACHINKO  THE  REVENGE", lcd_x + 10.0, lcd_y + 22.0, 22.0, GOLD);
-        draw_text(&format!("CH. {unlocked_chapter}"), lcd_x + lcd_w - 70.0, lcd_y + 22.0, 22.0, WHITE);
+        draw_text("PACHINKO  ::  THE REVENGE", lcd_x + 10.0, lcd_y + 22.0, 22.0, GOLD);
+        draw_text(&format!("CH {unlocked_chapter}"), lcd_x + lcd_w - 80.0, lcd_y + 22.0, 22.0, WHITE);
     }
 
     // Reels (3, equally spaced)
@@ -219,12 +259,13 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
         draw_text("- attacker closed -", lcd_x + lcd_w * 0.3, att_y + att_h * 0.55, 22.0, Color::from_rgba(160, 100, 80, 255));
     }
 
-    // Chucker (golden cup) — visualized as a small cup at bottom-center
+    // Chucker (golden cup) — visualized as a small cup at bottom-center.
+    // "ヘソ" in real machines; romanized here because default font lacks CJK.
     let chuck_cx = cab_x + cab_w * 0.5;
     let chuck_cy = cab_y + cab_h - 26.0;
-    draw_circle(chuck_cx, chuck_cy, 22.0, Color::from_rgba(255, 215, 0, 255));
-    draw_circle_lines(chuck_cx, chuck_cy, 22.0, 2.0, BLACK);
-    draw_text("ヘソ", chuck_cx - 22.0, chuck_cy + 8.0, 22.0, BLACK);
+    draw_circle(chuck_cx, chuck_cy, 24.0, Color::from_rgba(255, 215, 0, 255));
+    draw_circle_lines(chuck_cx, chuck_cy, 24.0, 2.0, BLACK);
+    draw_text("HESO", chuck_cx - 22.0, chuck_cy + 6.0, 18.0, BLACK);
 
     // Data lamp HUD (top right)
     draw_data_lamp(sw - 240.0 - 8.0, 8.0, 240.0, 160.0, spins_since_jp, last_jp_history, cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach, kakuhen_remaining);
@@ -290,41 +331,44 @@ fn lcd_color(s: CabinetState, rs: &RenderState) -> Color {
 }
 
 fn draw_reel(x: f32, y: f32, w: f32, h: f32, offset: f32, target: Option<u8>) {
-    // Numbers 0-9 cycling vertically. Each digit is ~50px tall.
-    let row_h = 56.0;
-    let visible_rows = (h / row_h).ceil() as i32 + 1;
-    // Show 3 visible numerals (top, middle, bottom).
-    // The "middle" position is the result.
+    // Classic 3-row pachinko reel: top / middle (result) / bottom.
+    // Heights are derived from the rect so digits always fit; text never leaks.
+    let row_h = h / 3.0;
     let center_y = y + h * 0.5;
-    let scroll = if target.is_some() {
-        // settled at target — show fixed
-        target.unwrap() as f32
-    } else {
-        (offset % 10.0)
-    };
-    // Top digit
-    for k in -(visible_rows / 2)..=(visible_rows / 2) {
-        let digit_idx = ((scroll + 10.0 + k as f32) as i32).rem_euclid(10) as u8;
-        let dy = center_y + (k as f32) * row_h - row_h * 0.5;
-        // The middle row (k=0) is highlighted
+    let scroll = if target.is_some() { target.unwrap() as f32 } else { offset };
+    let digit_size = (row_h * 0.78) as u16;
+    for k in -1i32..=1 {
+        // Use a fractional scroll so spinning reels smoothly slide between digits.
+        let frac = scroll - scroll.floor();
+        let digit_idx = (((scroll.floor() as i32) + k + 10).rem_euclid(10)) as u8;
+        let dy = center_y + (k as f32) * row_h - row_h * 0.5
+               + if target.is_none() { -frac * row_h } else { 0.0 };
         if k == 0 {
-            draw_rectangle(x + 4.0, dy - 6.0, w - 8.0, row_h - 4.0, Color::from_rgba(255, 240, 200, 255));
+            draw_rectangle(x + 4.0, y + h * 0.5 - row_h * 0.5 + 2.0,
+                           w - 8.0, row_h - 4.0,
+                           Color::from_rgba(255, 240, 200, 255));
         }
+        // Strict clip: text vertical center must be inside the rect, else skip.
+        let text_y = dy + row_h * 0.78;
+        if text_y < y + row_h * 0.3 || text_y > y + h { continue; }
         let txt = format!("{digit_idx}");
-        let m = measure_text(&txt, None, 52, 1.0);
+        let m = measure_text(&txt, None, digit_size, 1.0);
         let c = if digit_idx == 7 { Color::from_rgba(200, 30, 30, 255) } else { Color::from_rgba(20, 20, 30, 255) };
-        draw_text(&txt, x + (w - m.width) * 0.5, dy + row_h * 0.55, 52.0, c);
+        draw_text(&txt, x + (w - m.width) * 0.5, text_y, digit_size as f32, c);
     }
+    // Bezel cap top + bottom — covers any straggler pixels just outside the rect.
+    draw_rectangle(x - 4.0, y - 6.0, w + 8.0, 6.0, Color::from_rgba(20, 12, 28, 255));
+    draw_rectangle(x - 4.0, y + h, w + 8.0, 6.0, Color::from_rgba(20, 12, 28, 255));
 }
 
 fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32) {
     draw_rectangle(x, y, w, h, Color::from_rgba(30, 20, 60, 230));
     draw_rectangle_lines(x, y, w, h, 2.0, GOLD);
-    draw_text("データランプ", x + 8.0, y + 22.0, 18.0, GOLD);
-    draw_text("DATA  LAMP", x + 130.0, y + 22.0, 16.0, Color::new(1.0, 1.0, 1.0, 0.6));
-    draw_text(&format!("回転 {spins_since:>4}"), x + 8.0, y + 50.0, 24.0, WHITE);
-    let label = if in_kakuhen { format!("確変 ST {remaining}") } else { "通常".into() };
-    draw_text(&label, x + 8.0, y + 78.0, 22.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
+    draw_text("DATA  LAMP", x + 8.0, y + 22.0, 18.0, GOLD);
+    draw_text("v0.1", x + w - 36.0, y + 22.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
+    draw_text(&format!("SPINS {spins_since:>4}"), x + 8.0, y + 50.0, 24.0, WHITE);
+    let label = if in_kakuhen { format!("KAKUHEN ST {remaining}") } else { "BASE PLAY".into() };
+    draw_text(&label, x + 8.0, y + 78.0, 20.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
 
     // History bars
     let bar_y = y + 96.0;

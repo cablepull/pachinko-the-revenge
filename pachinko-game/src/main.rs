@@ -27,6 +27,24 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // Critical: render at least one frame BEFORE awaiting audio load.
+    // On WASM, `AudioBank::build` awaits Web Audio decode of every clip and
+    // can take ~hundreds of ms (or stall entirely until the user gesture
+    // unlocks the AudioContext). Without a `next_frame().await` first, the
+    // macroquad runtime never gets to draw — the canvas stays black with no
+    // visible error. The "loading…" frame lets users see something is alive.
+    for _ in 0..2 {
+        clear_background(Color::from_rgba(8, 6, 16, 255));
+        let sw = screen_width();
+        let sh = screen_height();
+        let m = measure_text("loading…", None, 40, 1.0);
+        draw_text("loading…", (sw - m.width) * 0.5, sh * 0.5, 40.0, Color::from_rgba(243, 181, 74, 255));
+        let sub = "synthesizing audio bank";
+        let ms = measure_text(sub, None, 16, 1.0);
+        draw_text(sub, (sw - ms.width) * 0.5, sh * 0.5 + 28.0, 16.0, Color::from_rgba(160, 130, 100, 255));
+        next_frame().await;
+    }
+
     let bank = AudioBank::build().await;
 
     let seed = (get_time() * 1_000.0) as u64 ^ 0xCAFE_F00D;
@@ -92,8 +110,16 @@ async fn main() {
             let ev = session.pull_chucker();
             match ev {
                 SessionEvent::SpinResolved { outcome, reach_id: _ } => {
-                    rs.reel_offsets = [0.0, 0.0, 0.0];
-                    rs.reel_targets = [None; 3];
+                    // Start reel spin animation. Reels 1 + 2 stagger; reel 3
+                    // (the "reach" reel) holds longer if there's a reach.
+                    let stops = match outcome.reach_tier {
+                        None => [0.35, 0.55, 0.80],
+                        Some(tier) => {
+                            let dur = reach_duration_for(tier);
+                            [0.35, 0.65, (dur - 0.35).max(1.0)]
+                        }
+                    };
+                    rs.start_spin(stops);
                     if let Some(tier) = outcome.reach_tier {
                         rs.last_reach_tier = Some(tier);
                         let dur = reach_duration_for(tier);
@@ -120,7 +146,7 @@ async fn main() {
                     }
                 }
                 SessionEvent::JackpotStart => {
-                    rs.reel_targets = [Some(7); 3];
+                    rs.snap_reels([7, 7, 7]);
                     rs.flash(0.5);
                     rs.show_overlay("F E V E R !!", 2.5);
                     audio::play_one(&bank.hit_fanfare, 1.0);
@@ -197,11 +223,14 @@ async fn main() {
 enum BgmTrack { Base, Reach, Kakuhen }
 
 fn reach_duration_for(t: ReachTier) -> f32 {
+    // Pacing tuned for auto-fire feel: short calms keep the base loop crisp;
+    // premium/confirmed hold for catharsis. Real CR machines are slower but
+    // also have a continuous ball stream filling the wait — we don't.
     match t {
-        ReachTier::Calm => 2.2,
-        ReachTier::Mid => 3.8,
-        ReachTier::Premium => 5.5,
-        ReachTier::Confirmed => 8.0,
+        ReachTier::Calm => 1.4,
+        ReachTier::Mid => 2.8,
+        ReachTier::Premium => 4.5,
+        ReachTier::Confirmed => 7.5,
     }
 }
 

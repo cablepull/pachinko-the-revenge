@@ -88,6 +88,11 @@ nbproject/
 .claude/projects/
 .claude/cache/
 
+# --- transient dev artifacts ---
+.tmp/
+assets/NotoSansJP*.otf
+assets/Noto*.otf
+
 # --- archives / large binaries (avoid accidental check-in) ---
 *.zip
 *.tar

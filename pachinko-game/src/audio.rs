@@ -37,7 +37,22 @@ impl AudioBank {
 }
 
 async fn load(bytes: &[u8]) -> Sound {
-    load_sound_from_bytes(bytes).await.expect("synthesized WAV must load")
+    // Loading must not panic the whole game if audio init fails (e.g. browser
+    // hasn't unlocked AudioContext yet, or a sample is malformed). Fall back
+    // to a 1-sample silent Sound so play_sound is a no-op.
+    match load_sound_from_bytes(bytes).await {
+        Ok(s) => s,
+        Err(_) => {
+            let silent = silent_wav();
+            load_sound_from_bytes(&silent).await
+                .unwrap_or_else(|_| panic!("even silent WAV failed to load"))
+        }
+    }
+}
+
+fn silent_wav() -> Vec<u8> {
+    // 1 sample of silence (mono, 22050 Hz, 16-bit PCM)
+    wav(&[0i16])
 }
 
 pub fn play_one(sound: &Sound, volume: f32) {

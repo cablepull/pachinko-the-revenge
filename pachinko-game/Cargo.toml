@@ -13,9 +13,9 @@ path = "src/main.rs"
 
 [dependencies]
 pachinko-core = { path = "../pachinko-core", features = ["std"] }
-macroquad = { version = "0.4", default-features = false }
-quad-snd = "0.2"
+# IMPORTANT: do NOT pass default-features = false here. macroquad's default
+# features include "audio", which links the macroquad_audio JS plugin glue
+# in WASM. Without it, load_sound_from_bytes panics on first call and the
+# WASM never gets past AudioBank::build() → black canvas.
+macroquad = "0.4"
 serde_json = "1"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-sapp-jsutils = "0.1"
