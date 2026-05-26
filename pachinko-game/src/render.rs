@@ -13,6 +13,7 @@ use pachinko_core::outcome::ReachTier;
 
 use crate::ball::{Ball, BallState, Pin, Playfield};
 use crate::playfield;
+use crate::scene;
 
 pub struct RenderState {
     pub reel_offsets: [f32; 3],
@@ -185,6 +186,12 @@ pub fn draw_cabinet(
     draw_rectangle(cab_x - 8.0, cab_y - 8.0, cab_w + 16.0, cab_h + 16.0, Color::from_rgba(230, 180, 50, 255));
     draw_rectangle(cab_x, cab_y, cab_w, cab_h, Color::from_rgba(20, 12, 28, 255));
 
+    // ---- BACK PANEL (deepest plane — drawn before everything inside) ----
+    scene::draw_back_panel(cab_x, cab_y, cab_w, cab_h, cab_state, get_time());
+
+    // ---- MARQUEE (title strip above the cabinet) ----
+    scene::draw_marquee(cab_x, cab_y, cab_w, get_time());
+
     // LCD screen area — now compact (top quarter of cabinet) to make room
     // for the ball-and-pin playfield below.
     let lcd_x = pf.lcd_x;
@@ -192,8 +199,12 @@ pub fn draw_cabinet(
     let lcd_w = pf.lcd_w;
     let lcd_h = pf.lcd_h;
     let lcd_bg = lcd_color(cab_state, rs);
+    // Drop shadow first so LCD sits "on top of" the back panel
+    scene::drop_shadow_rect(lcd_x, lcd_y, lcd_w, lcd_h, 5.0, 0.45);
+    // LCD inner bezel — chrome-ish gold frame around the actual screen
+    draw_rectangle(lcd_x - 5.0, lcd_y - 5.0, lcd_w + 10.0, lcd_h + 10.0, Color::from_rgba(140, 100, 30, 255));
+    draw_rectangle(lcd_x - 2.0, lcd_y - 2.0, lcd_w + 4.0, lcd_h + 4.0, Color::from_rgba(245, 200, 80, 255));
     draw_rectangle(lcd_x, lcd_y, lcd_w, lcd_h, lcd_bg);
-    draw_rectangle_lines(lcd_x, lcd_y, lcd_w, lcd_h, 4.0, Color::from_rgba(255, 200, 0, 255));
 
     // Title overlay strip
     // (Japanese chars deferred: macroquad's default font has no CJK glyphs and
@@ -298,42 +309,64 @@ pub fn draw_cabinet(
 
     // ---- LAUNCH CHUTE (right side) + KNOB ----
     let (chute_x, chute_y, chute_w, chute_h) = playfield::launcher_chute_rect(pf);
+    scene::drop_shadow_rect(chute_x, chute_y, chute_w, chute_h, 3.0, 0.4);
     draw_rectangle(chute_x, chute_y, chute_w, chute_h, Color::from_rgba(40, 28, 18, 255));
     draw_rectangle_lines(chute_x, chute_y, chute_w, chute_h, 2.0, Color::from_rgba(120, 80, 30, 255));
+    // Inner highlight strip
+    draw_rectangle(chute_x + 2.0, chute_y + 2.0, 2.0, chute_h - 4.0, Color::from_rgba(180, 130, 50, 200));
+
     // Knob: a gold dial just below the chute
     let knob_cx = chute_x + chute_w * 0.5;
     let knob_cy = chute_y + chute_h + 28.0;
     let knob_r = 22.0;
     let knob_color = if launcher_active { Color::from_rgba(255, 220, 80, 255) } else { Color::from_rgba(210, 170, 30, 255) };
+    scene::drop_shadow_circle(knob_cx, knob_cy, knob_r + 3.0, 4.0, 0.55);
     draw_circle(knob_cx, knob_cy, knob_r + 3.0, Color::from_rgba(40, 28, 18, 255));
     draw_circle(knob_cx, knob_cy, knob_r, knob_color);
+    // Knob rim highlight + a few "grip" notches
+    draw_circle(knob_cx - knob_r * 0.35, knob_cy - knob_r * 0.35, knob_r * 0.35, Color::new(1.0, 1.0, 1.0, 0.35));
+    for i in 0..8 {
+        let a = i as f32 * std::f32::consts::TAU / 8.0;
+        let nx = knob_cx + a.cos() * knob_r * 0.9;
+        let ny = knob_cy + a.sin() * knob_r * 0.9;
+        draw_circle(nx, ny, 1.5, Color::from_rgba(100, 60, 10, 200));
+    }
     // Pointer indicator (rotates when active)
     let pointer_angle: f32 = if launcher_active { -0.6 } else { -1.2 };
     let px = knob_cx + pointer_angle.cos() * knob_r * 0.7;
     let py = knob_cy + pointer_angle.sin() * knob_r * 0.7;
     draw_line(knob_cx, knob_cy, px, py, 3.0, BLACK);
-    draw_text("KNOB", knob_cx - 18.0, knob_cy + knob_r + 16.0, 14.0, Color::from_rgba(200, 160, 80, 255));
+    draw_text("KNOB", knob_cx - 16.0, knob_cy + knob_r + 16.0, 14.0, Color::from_rgba(200, 160, 80, 255));
 
-    // ---- ATTACKER (jackpot door) — narrower band below the chucker zone ----
+    // ---- ATTACKER — recessed when closed (per PRD-003 R-35), theatrical when open ----
     let att_y = cab_y + cab_h * 0.80;
     let att_h = cab_h * 0.11;
     let att_x = lcd_x;
     let att_w = lcd_w;
     let attacker_open = matches!(cab_state, CabinetState::JackpotRound | CabinetState::BetweenRounds);
     if attacker_open {
+        scene::drop_shadow_rect(att_x, att_y, att_w, att_h, 6.0, 0.55);
         draw_rectangle(att_x, att_y, att_w, att_h, Color::from_rgba(255, 200, 60, 255));
+        // Animated chevrons inside the open door
+        let t = get_time() as f32;
+        for i in 0..4 {
+            let phase = (t * 1.8 + i as f32 * 0.4).sin() * 0.5 + 0.5;
+            let cy = att_y + att_h * 0.5;
+            let cx = att_x + att_w * (0.2 + i as f32 * 0.2);
+            draw_rectangle(cx - 8.0, cy - 6.0 + phase * 4.0, 16.0, 2.0, Color::from_rgba(160, 30, 30, 220));
+        }
         draw_text("OPEN  !!  ATTACKER  !!  OPEN", att_x + 16.0, att_y + att_h * 0.62, 28.0, RED);
-    } else {
-        draw_rectangle(att_x, att_y, att_w, att_h, Color::from_rgba(40, 20, 30, 255));
-        draw_rectangle_lines(att_x, att_y, att_w, att_h, 3.0, Color::from_rgba(120, 80, 30, 255));
-        draw_text("- attacker closed -", att_x + att_w * 0.3, att_y + att_h * 0.62, 18.0, Color::from_rgba(160, 100, 80, 255));
     }
+    // No filler when closed — the area is left as back-panel art (per PRD-003 R-35).
 
     // ---- CHUCKER (gold cup) — where balls land to trigger reels ----
-    draw_circle(pf.chucker_cx, pf.chucker_cy + 2.0, pf.chucker_r + 2.0, Color::from_rgba(60, 40, 8, 255));
+    scene::drop_shadow_circle(pf.chucker_cx, pf.chucker_cy, pf.chucker_r + 2.0, 4.0, 0.55);
     draw_circle(pf.chucker_cx, pf.chucker_cy, pf.chucker_r, Color::from_rgba(255, 215, 0, 255));
     draw_circle_lines(pf.chucker_cx, pf.chucker_cy, pf.chucker_r, 2.0, Color::from_rgba(120, 80, 0, 255));
-    draw_text("HESO", pf.chucker_cx - 20.0, pf.chucker_cy + 5.0, 16.0, BLACK);
+    // Highlight (top-left curve)
+    draw_circle(pf.chucker_cx - pf.chucker_r * 0.4, pf.chucker_cy - pf.chucker_r * 0.4,
+                pf.chucker_r * 0.3, Color::new(1.0, 1.0, 1.0, 0.4));
+    draw_text("HESO", pf.chucker_cx - 18.0, pf.chucker_cy + 4.0, 14.0, BLACK);
 
     // Data lamp HUD (top right). Made taller to fit BALLS FIRED/RETURNED.
     draw_data_lamp(
@@ -343,6 +376,10 @@ pub fn draw_cabinet(
         kakuhen_remaining, balls_won, total_jackpots,
         balls_fired, balls_returned,
     );
+
+    // ---- ANIMATED BEZEL LIGHTING (PRD-003 R-37) ----
+    // Drawn on top of the static bezel so the light strips read as glow.
+    scene::draw_bezel_lighting(cab_x, cab_y, cab_w, cab_h, cab_state, get_time());
 
     // Particles (jackpot confetti)
     for p in &rs.particles {

@@ -12,6 +12,7 @@ mod audio;
 mod ball;
 mod playfield;
 mod render;
+mod scene;
 mod persist;
 
 use audio::AudioBank;
