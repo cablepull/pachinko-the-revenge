@@ -228,7 +228,62 @@ This section is appended to as iterations produce concrete, transferable lessons
 - **macroquad's font-atlas churn is real.** Using many distinct text sizes (14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 44, 48, 52, 64, 96) triggers a stream of `glBindTexture called with an already deleted texture ID` warnings every frame. Cluster to ~6 sizes max (e.g. 14, 18, 22, 32, 48, 96) to keep the atlas stable.
 - **The discipline ratchet works.** magnetfragnet's nudge-9 fired 6 iterations in a row before audit-001 reset it. Producing the audit forced the H2 (drift) and H5 (tension) hypotheses that drove iteration 2's scope. Without the nudge, the slot-machine drift could have persisted indefinitely.
 
-### From iteration 3 (planned — to be filled in)
+### From iteration 3 (event celebrations, depth, economy)
 
-_[Append on iteration 3 close: what worked about the depth grammar, which event animations had the strongest user response, what we got wrong about the economy display, etc.]_
+Iteration 3 went hard at the iter-2 critique "weak graphics, no animations, one-
+dimensional cabinet, no sense of money." Six lessons worth carrying forward:
+
+- **The six-plane grammar (§7) translates directly to a draw-call order.** Once
+  the cabinet was structured as `clear → state tint → outer bezel → back-panel
+  → LCD shadow → LCD bezel+screen → pin field → balls → chucker → attacker (if
+  open) → launcher → animated bezel → cut-ins → fever reveal → kakuhen slam →
+  chapter card → particles → P/L → toggle button`, every depth question
+  ("should this be in front of that?") had a non-arbitrary answer. Without that
+  explicit ordering, layered rendering becomes a brittle puzzle.
+
+- **Event animations should be data-driven from RenderState, not from frame
+  timers in render.** Adding fields like `chucker_flashes: Vec<(x,y,life)>`,
+  `cutin_active: bool`, `fever_reveal_t: f32`, `kakuhen_slam_t: f32`,
+  `chapter_card_elapsed: f32` plus `tick(dt)` that decays them — then `render`
+  reads them — makes the animations testable and trivially composable. Multiple
+  chucker flashes can coexist (Vec); one cut-in at a time (single Option). The
+  shape of the state determines the multiplicity story.
+
+- **"Always-visible P/L" is the single highest-leverage HUD element for
+  conveying value.** A small, color-tinted "+¥248" / "−¥648" indicator at the
+  top of the screen carried more emotional weight per pixel than the entire
+  data lamp panel. The data lamp is for the regular who wants to dig; the P/L
+  is for everyone else. The default UI should be one P/L number + one toggle
+  button + the cabinet itself — nothing else.
+
+- **Hidden-by-default + glow-pulse on new info is the right pattern for HUDs.**
+  The data lamp's `data_lamp_glow_t` field that decays after a jackpot or
+  chucker entry makes the toggle button itself communicate "look at me." Real
+  pachinko's data lamps are dome-shaped LEDs that pulse when state changes;
+  the digital equivalent is the toggle-button rim glow.
+
+- **Stylized "art" can come from rects + lines + gradients alone.** The back-
+  panel rain-soaked neon cityscape uses zero image assets — just 9 rectangle
+  silhouettes, per-building neon strips, window dots, diagonal rain lines, a
+  moon disc, and scanlines. Total cost: ~120 lines of Rust, ~1ms per frame.
+  This unblocks single-file-WASM distribution per intent C-13. Embed nothing;
+  paint everything.
+
+- **HTML/WASM key-binding conflicts will silently swallow inputs.** Iter 3
+  first deployed with `H` bound to BOTH the HTML help overlay and the WASM
+  data-lamp toggle — the HTML's `preventDefault()` won and the WASM never saw
+  the key. Visible only when running headless probes asked "did the toggle
+  work?" The fix is to partition the keyboard cleanly between layers; in this
+  project, HTML now owns `?` only and `H` / `Tab` go to WASM.
+
+Operational improvements: magnetfragnet 0.1.0 gained `check` (CLI path mirroring
+the MCP `nudge_iteration` tool) and `hooks install` (auto-wires PostToolUse +
+Stop hooks in `.claude/settings.json`). Iter-3 retired the `.tmp/mfn.mjs` stdio
+driver — the CLI is the cleaner integration surface.
+
+Recommendation for iteration 4: surface the still-flat chucker rate (~15%,
+target 25–40% per PRD-002 R-29) as the *gameplay lever* (nail-adjustment 釘
+調整) rather than a static config — let the player retune the funnel and watch
+the rate respond. That makes the §9 economy meaningful: better nail layouts
+yield better ベース which yields more chucker hits per yen spent.
 
