@@ -53,4 +53,17 @@ know it's solved (the measurable outcome).
 | 005 | Persistence via quad-storage | Ready | PRD-004 R-54 | M |
 | 006 | Session-end summary screen | Ready | PRD-004 R-52 | S–M |
 | 007 | Welcome-back continuity card | Ready | PRD-004 R-53 | S |
-| 008 | Environmental reach cues + BGM crossfade | Ready | PRD-004 R-50/55 | M |
+| 008 | Environmental reach cues + BGM crossfade | Ready (iter-5 carry) | PRD-004 R-50/55 | M |
+| 009 | CabinetDef + cabinet registry | Ready | PRD-005 R-59..61 | M |
+| 010 | Cabinet selection screen | Ready | PRD-005 R-64..68 | M |
+| 011 | Mid-session cabinet swap | Ready | PRD-005 R-67 | S |
+| 012 | ThemePack threaded through render + audio | Ready | PRD-005 R-72/73 | L |
+| 013 | Per-cabinet persistence namespace + iter-4 migration | Ready | PRD-005 R-62/79 | S–M |
+| 014 | Parlor card (cross-cabinet meta-progression) | Ready | PRD-005 R-78/79 | S–M |
+| 015 | `deep-sea-song` cabinet (Casual + TidalRush) | Ready | PRD-005 R-70..72/80 | M |
+| 016 | TidalRush mechanic plugin | Ready | PRD-005 R-70/80..82 | S–M |
+| 017 | Port `the-revenge` onto the platform | Ready | PRD-005 R-69 | M |
+| 018 | Sprite cache + procedural sprite pipeline (Phase A) | Ready | PRD-005 R-74/76/77 | L |
+| 019 | Per-theme back-panel renderer (Neon + Ocean) | Ready | PRD-005 R-72/73/76 | M |
+| 020 | Embedded sprite assets via include_bytes!() (Phase B) | Blocked (assets) | PRD-005 R-74/75/76 | M+L |
+| 021 | Stock-layout band test per cabinet | Ready | PRD-005 R-63 | S |
