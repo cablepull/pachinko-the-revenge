@@ -11,6 +11,9 @@ use macroquad::prelude::*;
 use pachinko_core::coordinator::CabinetState;
 use pachinko_core::outcome::ReachTier;
 
+use crate::ball::{Ball, BallState, Pin, Playfield};
+use crate::playfield;
+
 pub struct RenderState {
     pub reel_offsets: [f32; 3],
     pub reel_targets: [Option<u8>; 3],
@@ -136,14 +139,29 @@ impl RenderState {
     }
 }
 
-pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining: u32, spins_since_jp: u32, last_jp_history: &[u32], unlocked_chapter: u32, balls_won: u64, total_jackpots: u32) {
+pub fn draw_cabinet(
+    rs: &RenderState,
+    cab_state: CabinetState,
+    kakuhen_remaining: u32,
+    spins_since_jp: u32,
+    last_jp_history: &[u32],
+    unlocked_chapter: u32,
+    balls_won: u64,
+    total_jackpots: u32,
+    pf: &Playfield,
+    pins: &[Pin],
+    balls: &[Ball],
+    balls_fired: u32,
+    balls_returned: u32,
+    launcher_active: bool,
+) {
     clear_background(Color::from_rgba(8, 6, 16, 255));
 
     let sw = screen_width();
     let sh = screen_height();
 
-    let shake_x = if rs.shake_t > 0.0 { ((rs.shake_t * 47.0).sin() * 8.0 * rs.shake_t.min(1.0)) } else { 0.0 };
-    let shake_y = if rs.shake_t > 0.0 { ((rs.shake_t * 59.0).cos() * 8.0 * rs.shake_t.min(1.0)) } else { 0.0 };
+    let shake_x = if rs.shake_t > 0.0 { (rs.shake_t * 47.0).sin() * 8.0 * rs.shake_t.min(1.0) } else { 0.0 };
+    let shake_y = if rs.shake_t > 0.0 { (rs.shake_t * 59.0).cos() * 8.0 * rs.shake_t.min(1.0) } else { 0.0 };
 
     // Background tint by state
     let tint = state_tint(cab_state);
@@ -156,22 +174,23 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
         draw_rectangle(0.0, 0.0, sw, sh, c);
     }
 
-    // Cabinet bezel (gold)
+    // Cabinet bezel (gold) — match playfield builder's expected dimensions
     let cx = sw * 0.5 + shake_x;
     let cy = sh * 0.5 + shake_y;
     let cab_w = sw * 0.72;
-    let cab_h = sh * 0.78;
+    let cab_h = sh * 0.82;
     let cab_x = cx - cab_w * 0.5;
     let cab_y = cy - cab_h * 0.5;
     draw_rectangle(cab_x - 14.0, cab_y - 14.0, cab_w + 28.0, cab_h + 28.0, Color::from_rgba(60, 20, 20, 255));
     draw_rectangle(cab_x - 8.0, cab_y - 8.0, cab_w + 16.0, cab_h + 16.0, Color::from_rgba(230, 180, 50, 255));
     draw_rectangle(cab_x, cab_y, cab_w, cab_h, Color::from_rgba(20, 12, 28, 255));
 
-    // LCD screen area
-    let lcd_x = cab_x + cab_w * 0.08;
-    let lcd_y = cab_y + cab_h * 0.07;
-    let lcd_w = cab_w * 0.84;
-    let lcd_h = cab_h * 0.52;
+    // LCD screen area — now compact (top quarter of cabinet) to make room
+    // for the ball-and-pin playfield below.
+    let lcd_x = pf.lcd_x;
+    let lcd_y = pf.lcd_y;
+    let lcd_w = pf.lcd_w;
+    let lcd_h = pf.lcd_h;
     let lcd_bg = lcd_color(cab_state, rs);
     draw_rectangle(lcd_x, lcd_y, lcd_w, lcd_h, lcd_bg);
     draw_rectangle_lines(lcd_x, lcd_y, lcd_w, lcd_h, 4.0, Color::from_rgba(255, 200, 0, 255));
@@ -191,12 +210,12 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
         let _ = unlocked_chapter;
     }
 
-    // Reels (3, equally spaced)
+    // Reels (3, equally spaced) — slightly tighter now that the LCD is shorter
     let reel_count = 3;
-    let reel_w = lcd_w * 0.22;
-    let reel_h = lcd_h * 0.55;
+    let reel_w = lcd_w * 0.20;
+    let reel_h = lcd_h * 0.62;
     let reel_gap = (lcd_w - reel_w * reel_count as f32) / (reel_count as f32 + 1.0);
-    let reel_y = lcd_y + 50.0;
+    let reel_y = lcd_y + 36.0;
     for i in 0..reel_count {
         let rx = lcd_x + reel_gap + (reel_w + reel_gap) * i as f32;
         draw_rectangle(rx, reel_y, reel_w, reel_h, WHITE);
@@ -248,29 +267,82 @@ pub fn draw_cabinet(rs: &RenderState, cab_state: CabinetState, kakuhen_remaining
         }
     }
 
-    // Attacker (jackpot door) area below LCD
-    let att_y = lcd_y + lcd_h + 18.0;
-    let att_h = cab_h * 0.18;
-    let attacker_open = matches!(cab_state, CabinetState::JackpotRound | CabinetState::BetweenRounds);
-    if attacker_open {
-        draw_rectangle(lcd_x, att_y, lcd_w, att_h, Color::from_rgba(255, 200, 60, 255));
-        draw_text("OPEN  !!  ATTACKER  !!  OPEN", lcd_x + 16.0, att_y + att_h * 0.55, 32.0, RED);
-    } else {
-        draw_rectangle(lcd_x, att_y, lcd_w, att_h, Color::from_rgba(40, 20, 30, 255));
-        draw_rectangle_lines(lcd_x, att_y, lcd_w, att_h, 3.0, Color::from_rgba(120, 80, 30, 255));
-        draw_text("- attacker closed -", lcd_x + lcd_w * 0.3, att_y + att_h * 0.55, 22.0, Color::from_rgba(160, 100, 80, 255));
+    // ---- PIN FIELD ----
+    // Draw the playfield backdrop first (a darker rectangle behind the pins).
+    let pf_left = pf.left;
+    let pf_right = pf.right;
+    let pf_top = pf.pin_zone_top - 6.0;
+    let pf_bottom = pf.pin_zone_bottom + 36.0;
+    draw_rectangle(
+        pf_left, pf_top,
+        pf_right - pf_left, pf_bottom - pf_top,
+        Color::from_rgba(12, 8, 22, 200),
+    );
+    // Pins (small steel dots)
+    for p in pins {
+        // Subtle highlight + dark base for a 3D feel
+        draw_circle(p.x, p.y, p.r + 0.5, Color::from_rgba(20, 20, 22, 255));
+        draw_circle(p.x, p.y, p.r, Color::from_rgba(200, 200, 210, 255));
+        draw_circle(p.x - p.r * 0.3, p.y - p.r * 0.3, p.r * 0.4, Color::from_rgba(255, 255, 255, 220));
     }
 
-    // Chucker (golden cup) — visualized as a small cup at bottom-center.
-    // "ヘソ" in real machines; romanized here because default font lacks CJK.
-    let chuck_cx = cab_x + cab_w * 0.5;
-    let chuck_cy = cab_y + cab_h - 26.0;
-    draw_circle(chuck_cx, chuck_cy, 24.0, Color::from_rgba(255, 215, 0, 255));
-    draw_circle_lines(chuck_cx, chuck_cy, 24.0, 2.0, BLACK);
-    draw_text("HESO", chuck_cx - 22.0, chuck_cy + 6.0, 18.0, BLACK);
+    // ---- BALLS ----
+    for b in balls {
+        if b.state != BallState::InFlight { continue; }
+        // Shadow
+        draw_circle(b.x + 1.5, b.y + 2.0, b.r, Color::new(0.0, 0.0, 0.0, 0.4));
+        // Body — steel highlight
+        draw_circle(b.x, b.y, b.r, Color::from_rgba(220, 220, 230, 255));
+        draw_circle(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.35, Color::from_rgba(255, 255, 255, 230));
+    }
 
-    // Data lamp HUD (top right). Made taller to fit BALLS WON + JP count.
-    draw_data_lamp(sw - 260.0 - 8.0, 8.0, 260.0, 196.0, spins_since_jp, last_jp_history, cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach, kakuhen_remaining, balls_won, total_jackpots);
+    // ---- LAUNCH CHUTE (right side) + KNOB ----
+    let (chute_x, chute_y, chute_w, chute_h) = playfield::launcher_chute_rect(pf);
+    draw_rectangle(chute_x, chute_y, chute_w, chute_h, Color::from_rgba(40, 28, 18, 255));
+    draw_rectangle_lines(chute_x, chute_y, chute_w, chute_h, 2.0, Color::from_rgba(120, 80, 30, 255));
+    // Knob: a gold dial just below the chute
+    let knob_cx = chute_x + chute_w * 0.5;
+    let knob_cy = chute_y + chute_h + 28.0;
+    let knob_r = 22.0;
+    let knob_color = if launcher_active { Color::from_rgba(255, 220, 80, 255) } else { Color::from_rgba(210, 170, 30, 255) };
+    draw_circle(knob_cx, knob_cy, knob_r + 3.0, Color::from_rgba(40, 28, 18, 255));
+    draw_circle(knob_cx, knob_cy, knob_r, knob_color);
+    // Pointer indicator (rotates when active)
+    let pointer_angle: f32 = if launcher_active { -0.6 } else { -1.2 };
+    let px = knob_cx + pointer_angle.cos() * knob_r * 0.7;
+    let py = knob_cy + pointer_angle.sin() * knob_r * 0.7;
+    draw_line(knob_cx, knob_cy, px, py, 3.0, BLACK);
+    draw_text("KNOB", knob_cx - 18.0, knob_cy + knob_r + 16.0, 14.0, Color::from_rgba(200, 160, 80, 255));
+
+    // ---- ATTACKER (jackpot door) — narrower band below the chucker zone ----
+    let att_y = cab_y + cab_h * 0.80;
+    let att_h = cab_h * 0.11;
+    let att_x = lcd_x;
+    let att_w = lcd_w;
+    let attacker_open = matches!(cab_state, CabinetState::JackpotRound | CabinetState::BetweenRounds);
+    if attacker_open {
+        draw_rectangle(att_x, att_y, att_w, att_h, Color::from_rgba(255, 200, 60, 255));
+        draw_text("OPEN  !!  ATTACKER  !!  OPEN", att_x + 16.0, att_y + att_h * 0.62, 28.0, RED);
+    } else {
+        draw_rectangle(att_x, att_y, att_w, att_h, Color::from_rgba(40, 20, 30, 255));
+        draw_rectangle_lines(att_x, att_y, att_w, att_h, 3.0, Color::from_rgba(120, 80, 30, 255));
+        draw_text("- attacker closed -", att_x + att_w * 0.3, att_y + att_h * 0.62, 18.0, Color::from_rgba(160, 100, 80, 255));
+    }
+
+    // ---- CHUCKER (gold cup) — where balls land to trigger reels ----
+    draw_circle(pf.chucker_cx, pf.chucker_cy + 2.0, pf.chucker_r + 2.0, Color::from_rgba(60, 40, 8, 255));
+    draw_circle(pf.chucker_cx, pf.chucker_cy, pf.chucker_r, Color::from_rgba(255, 215, 0, 255));
+    draw_circle_lines(pf.chucker_cx, pf.chucker_cy, pf.chucker_r, 2.0, Color::from_rgba(120, 80, 0, 255));
+    draw_text("HESO", pf.chucker_cx - 20.0, pf.chucker_cy + 5.0, 16.0, BLACK);
+
+    // Data lamp HUD (top right). Made taller to fit BALLS FIRED/RETURNED.
+    draw_data_lamp(
+        sw - 260.0 - 8.0, 8.0, 260.0, 226.0,
+        spins_since_jp, last_jp_history,
+        cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach,
+        kakuhen_remaining, balls_won, total_jackpots,
+        balls_fired, balls_returned,
+    );
 
     // Particles (jackpot confetti)
     for p in &rs.particles {
@@ -363,26 +435,28 @@ fn draw_reel(x: f32, y: f32, w: f32, h: f32, offset: f32, target: Option<u8>) {
     draw_rectangle(x - 4.0, y + h, w + 8.0, 6.0, Color::from_rgba(20, 12, 28, 255));
 }
 
-fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32, balls_won: u64, total_jackpots: u32) {
+fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32, balls_won: u64, total_jackpots: u32, balls_fired: u32, balls_returned: u32) {
     draw_rectangle(x, y, w, h, Color::from_rgba(30, 20, 60, 230));
     draw_rectangle_lines(x, y, w, h, 2.0, GOLD);
     draw_text("DATA  LAMP", x + 8.0, y + 22.0, 18.0, GOLD);
-    draw_text("v0.1", x + w - 36.0, y + 22.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
+    draw_text("v0.2", x + w - 36.0, y + 22.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
 
-    // Big SPINS (since last JP). The "ハマり" counter regulars hunt.
-    draw_text(&format!("SPINS  {spins_since:>4}"), x + 8.0, y + 52.0, 22.0, WHITE);
+    draw_text(&format!("SPINS  {spins_since:>4}"), x + 8.0, y + 50.0, 20.0, WHITE);
 
-    // State badge.
     let label = if in_kakuhen { format!("KAKUHEN  ST {remaining}") } else { "BASE PLAY".into() };
-    draw_text(&label, x + 8.0, y + 78.0, 18.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
+    draw_text(&label, x + 8.0, y + 74.0, 16.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
 
-    // Score: total JPs + balls won this session.
-    draw_text(&format!("JACKPOTS  {total_jackpots:>3}"), x + 8.0, y + 104.0, 16.0, Color::from_rgba(255, 220, 130, 255));
-    draw_text(&format!("BALLS WON  {balls_won}"), x + 8.0, y + 124.0, 16.0, Color::from_rgba(255, 220, 130, 255));
+    // Ball-tray HUD (PRD-002 R-32).
+    let return_pct = if balls_fired > 0 { (balls_returned as f32 / balls_fired as f32 * 100.0) as i32 } else { 0 };
+    draw_text(&format!("FIRED      {balls_fired:>5}"), x + 8.0, y + 100.0, 14.0, Color::from_rgba(180, 200, 220, 255));
+    draw_text(&format!("RETURNED   {balls_returned:>5}"), x + 8.0, y + 118.0, 14.0, Color::from_rgba(180, 200, 220, 255));
+    draw_text(&format!("RATE       {return_pct:>4}%"), x + 8.0, y + 136.0, 14.0, Color::from_rgba(180, 200, 220, 255));
 
-    // History bars (last 10 JP gaps).
-    let bar_y = y + 144.0;
-    let max_bar_h = 38.0;
+    draw_text(&format!("JACKPOTS  {total_jackpots:>3}"), x + 8.0, y + 158.0, 14.0, Color::from_rgba(255, 220, 130, 255));
+    draw_text(&format!("BALLS WON  {balls_won}"), x + 8.0, y + 176.0, 14.0, Color::from_rgba(255, 220, 130, 255));
+
+    let bar_y = y + 192.0;
+    let max_bar_h = 28.0;
     let bar_w = (w - 16.0) / 10.0;
     let max_v = history.iter().copied().max().unwrap_or(1).max(1);
     for (i, &v) in history.iter().take(10).enumerate() {

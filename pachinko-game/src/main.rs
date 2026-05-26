@@ -9,6 +9,8 @@ use pachinko_core::outcome::ReachTier;
 use pachinko_core::session::{Session, SessionEvent};
 
 mod audio;
+mod ball;
+mod playfield;
 mod render;
 mod persist;
 
@@ -71,24 +73,34 @@ async fn main() {
     let mut spins_at_last_jp: u32 = 0;
     let mut balls_won_total: u64 = 0;
 
-    let mut launch_cooldown: f32 = 0.0;
     let mut session_start_time = get_time();
+
+    // ---- Ball physics state (PRD-002 F-2) ----
+    // Compute the playfield from current canvas dimensions.
+    let (mut pf, mut pins) = build_playfield_from_screen();
+    let mut balls: Vec<ball::Ball> = Vec::with_capacity(80);
+    let mut last_launch_t: f64 = 0.0;
+    let mut balls_fired_total: u32 = 0;
+    let mut balls_returned_total: u32 = 0;
+    let mut last_canvas_size = (screen_width(), screen_height());
 
     loop {
         let dt = get_frame_time();
         session.update_time(((get_time() - session_start_time + (session.state.session_start_ms as f64 / 1000.0)) * 1000.0) as u64);
         rs.tick(dt);
-        launch_cooldown = (launch_cooldown - dt).max(0.0);
         reach_timer = (reach_timer - dt).max(0.0);
         round_timer = (round_timer - dt).max(0.0);
         between_timer = (between_timer - dt).max(0.0);
         fanfare_timer = (fanfare_timer - dt).max(0.0);
 
-        // ---- INPUT (PRD R-16: fanfare uninterruptible) ----
-        let can_input = fanfare_timer <= 0.0 && reach_timer <= 0.0;
-        let pull_requested = (is_key_pressed(KeyCode::Space)
-            || is_mouse_button_pressed(MouseButton::Left))
-            && can_input;
+        // Rebuild playfield if canvas resized
+        let cur_size = (screen_width(), screen_height());
+        if (cur_size.0 - last_canvas_size.0).abs() > 0.5 || (cur_size.1 - last_canvas_size.1).abs() > 0.5 {
+            let (new_pf, new_pins) = build_playfield_from_screen();
+            pf = new_pf;
+            pins = new_pins;
+            last_canvas_size = cur_size;
+        }
 
         if is_key_pressed(KeyCode::R) {
             session = Session::new(seed.wrapping_add(1), (get_time() * 1000.0) as u64);
@@ -98,14 +110,29 @@ async fn main() {
             audio::stop(&bank.kakuhen_bgm);
             audio::play_loop(&bank.base_bgm, 0.7);
             current_bgm = BgmTrack::Base;
+            balls.clear();
+            balls_fired_total = 0;
+            balls_returned_total = 0;
         }
 
-        // Auto-fire mode: hold space to keep pulling (with a cooldown)
-        let auto_fire = is_key_down(KeyCode::Space) && launch_cooldown <= 0.0 && can_input;
-        let do_pull = pull_requested || auto_fire;
+        // ---- LAUNCH (PRD-002 R-25) — hold SPACE / mouse to spawn balls ----
+        let space_held = is_key_down(KeyCode::Space) || is_mouse_button_down(MouseButton::Left);
+        let now_t = get_time();
+        const LAUNCH_INTERVAL: f64 = 0.2; // 5 balls/sec
+        if space_held && now_t - last_launch_t > LAUNCH_INTERVAL && balls.len() < 80 {
+            let (lx, ly, vx, vy) = playfield::launcher_emit(&pf, balls_fired_total);
+            balls.push(ball::Ball::new(lx, ly, vx, vy));
+            balls_fired_total += 1;
+            last_launch_t = now_t;
+        }
 
-        if do_pull && matches!(session.coord.state, CabinetState::Base | CabinetState::KakuhenBase) {
-            launch_cooldown = 0.18; // ~5.5 spins/sec
+        // ---- PHYSICS step (PRD-002 R-26) ----
+        let phys = ball::step(&mut balls, &pins, &pf, dt);
+        balls_returned_total += phys.chucker_entries;
+        ball::prune(&mut balls);
+
+        // ---- For each chucker entry, run the same handler as before (PRD-002 R-28) ----
+        for _ in 0..phys.chucker_entries {
             // Chucker chime — PRD R-15
             audio::play_one(&bank.chucker_chime, 0.8);
 
@@ -221,6 +248,12 @@ async fn main() {
             session.state.unlocked_chapter,
             balls_won_total,
             session.state.total_jackpots,
+            &pf,
+            &pins,
+            &balls,
+            balls_fired_total,
+            balls_returned_total,
+            space_held,
         );
 
         // Session stats overlay (small text top-left below state)
@@ -240,6 +273,19 @@ async fn main() {
 
 #[derive(Clone, Copy, PartialEq)]
 enum BgmTrack { Base, Reach, Kakuhen }
+
+fn build_playfield_from_screen() -> (ball::Playfield, Vec<ball::Pin>) {
+    let sw = screen_width();
+    let sh = screen_height();
+    // Mirror render.rs's cabinet rect computation.
+    let cab_w = sw * 0.72;
+    let cab_h = sh * 0.82;
+    let cab_x = sw * 0.5 - cab_w * 0.5;
+    let cab_y = sh * 0.5 - cab_h * 0.5;
+    let pf = playfield::build_playfield(cab_x, cab_y, cab_w, cab_h);
+    let pins = playfield::canonical_pins(&pf);
+    (pf, pins)
+}
 
 fn reach_duration_for(t: ReachTier) -> f32 {
     // Pacing tuned for auto-fire feel: short calms keep the base loop crisp;

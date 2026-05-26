@@ -149,16 +149,38 @@
         <h2>Playable iterations</h2>
         <ul class="iterations">
             <li>
-                <a class="title-link" href="iteration1/">Iteration 1 &nbsp;—&nbsp; MVP cabinet</a>
-                <div class="meta">2026-05-25 · ~481 KB WASM · single machine, single arc</div>
+                <a class="title-link" href="iteration2/">Iteration 2 &nbsp;—&nbsp; ball physics + pin field</a>
+                <div class="meta">2026-05-25 · ~489 KB WASM · single machine, single arc, real playfield</div>
+                <p class="desc">
+                    v0.1 looked like a slot machine — SPACE went directly to a reel spin. v0.2
+                    adds the layer that makes pachinko pachinko: a launch knob (right side), a
+                    visible diamond-pattern pin field (~80 pins), steel balls with gravity and
+                    pin collisions, and a chucker (HESO) that is now the <em>only</em> path to a
+                    reel spin. The base game rate (~25–40 balls returned per 100 fired) is now
+                    an emergent property of the pin layout instead of a hidden constant.
+                    Driven by <a href="https://github.com/cablepull/pachinko-the-revenge/tree/main/audits/audit-001-cabinet-slot-vs-pachinko-2026-05-25" style="color:#c79858">audit-001</a>
+                    (the ACH-shaped architecture audit produced via the intelligence-analyst
+                    skill after magnetfragnet's nudge-9 fired six iterations in a row).
+                </p>
+                <div class="tags">
+                    <span>Rust</span><span>macroquad</span><span>WASM</span>
+                    <span>ball physics</span><span>80 pins</span>
+                    <span>chucker-driven spins</span><span>C-15 / C-16</span>
+                </div>
+                <a class="play-cta" href="iteration2/">Play →</a>
+            </li>
+
+            <li>
+                <a class="title-link" href="iteration1/">Iteration 1 &nbsp;—&nbsp; MVP cabinet (math + reach)</a>
+                <div class="meta">2026-05-25 · ~481 KB WASM · the slot-shaped predecessor</div>
                 <p class="desc">
                     The headless math layer (21 green tests including Monte Carlo against the
                     canonical 1/199.8 base / 1/35.9 kakuhen / 70% ST-entry spec sheet),
                     wrapped with macroquad rendering, procedurally-synthesized audio, animated
-                    reels with staggered stops, the four-tier reach hierarchy (calm / mid /
-                    premium / confirmed), 165-spin ST kakuhen window, story-gated reach
-                    eligibility, and a data-lamp HUD that tracks spins-since-jackpot,
-                    jackpot count, balls won, and the last 10 jackpot intervals.
+                    reels with staggered stops, the four-tier reach hierarchy, ST kakuhen,
+                    chapter-gated reaches, and a data-lamp HUD. <em>SPACE triggered reel spins
+                    directly</em> — the architecture audit identified this as a drift from
+                    intent C-10 and prompted iteration 2.
                 </p>
                 <div class="tags">
                     <span>Rust</span><span>macroquad</span><span>WASM</span>
@@ -169,12 +191,13 @@
             </li>
 
             <li class="placeholder">
-                <div class="title">Iteration 2 &nbsp;—&nbsp; (planned)</div>
+                <div class="title">Iteration 3 &nbsp;—&nbsp; (planned)</div>
                 <div class="meta">TBD</div>
                 <p class="desc">
-                    Likely candidates: CJK-capable font subset, smoother BGM crossfades, full
-                    voice-acted reach cinematics, persistence via localStorage, the writer's
-                    pass on the story bible, and the long catharsis confirmed-reach animation.
+                    Likely candidates: CJK-capable font subset, BGM crossfade, voiced reach
+                    cinematics, localStorage persistence, story-bible writer's pass, nail-
+                    adjustment 釘調整 (per-pin position tuning as a gameplay lever), confirmed-
+                    reach long cinematic.
                 </p>
             </li>
         </ul>
