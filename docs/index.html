@@ -149,6 +149,30 @@
         <h2>Playable iterations</h2>
         <ul class="iterations">
             <li>
+                <a class="title-link" href="iteration3/">Iteration 3 &nbsp;—&nbsp; every event earns its celebration</a>
+                <div class="meta">2026-05-25 · ~509 KB WASM · cabinet depth, event animations, economy</div>
+                <p class="desc">
+                    Built around the iter-2 user critique that the game looked weak and
+                    one-dimensional. v0.3 adds: an animated bezel that responds to state
+                    (gold breathe on base, orange wave on reach, gold/red strobe on jackpot,
+                    red wash on kakuhen), a stylized rain-soaked neon cityscape behind the
+                    pin field, drop shadows on every cabinet element, character cut-ins on
+                    mid+ reaches with tier-named banners, a radial particle burst with
+                    directional gold rays plus letter-by-letter F E V E R reveal on
+                    jackpots, a "CHANCE TIME !!" banner that slams in from the top on
+                    kakuhen entry, full-screen chapter title cards that wipe across, and a
+                    yen-equivalent economy (¥4/ball) with an always-visible profit-loss
+                    indicator. Data lamp is toggleable; default UI is clean.
+                </p>
+                <div class="tags">
+                    <span>Rust</span><span>macroquad</span><span>WASM</span>
+                    <span>6-plane depth</span><span>13 event animations</span>
+                    <span>yen economy</span><span>C-17 / C-18</span>
+                </div>
+                <a class="play-cta" href="iteration3/">Play →</a>
+            </li>
+
+            <li>
                 <a class="title-link" href="iteration2/">Iteration 2 &nbsp;—&nbsp; ball physics + pin field</a>
                 <div class="meta">2026-05-25 · ~489 KB WASM · single machine, single arc, real playfield</div>
                 <p class="desc">
@@ -191,13 +215,16 @@
             </li>
 
             <li class="placeholder">
-                <div class="title">Iteration 3 &nbsp;—&nbsp; (planned)</div>
+                <div class="title">Iteration 4 &nbsp;—&nbsp; (planned)</div>
                 <div class="meta">TBD</div>
                 <p class="desc">
-                    Likely candidates: CJK-capable font subset, BGM crossfade, voiced reach
-                    cinematics, localStorage persistence, story-bible writer's pass, nail-
-                    adjustment 釘調整 (per-pin position tuning as a gameplay lever), confirmed-
-                    reach long cinematic.
+                    Likely candidates: CJK-capable font subset (so HESO / 確変 / 大当たり
+                    render correctly), BGM crossfade primitive (instead of the current
+                    hard-cut), voiced reach cinematics, localStorage persistence on WASM,
+                    story-bible writer's pass to fill the reach beat scripts, nail-
+                    adjustment 釘調整 as a player-controllable gameplay lever, the long
+                    confirmed-reach cinematic, and chasing PRD-002 R-29's 25–40% chucker
+                    rate (iter 3 measured ~15% — still below the band).
                 </p>
             </li>
         </ul>

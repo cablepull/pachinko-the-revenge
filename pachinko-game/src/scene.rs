@@ -229,6 +229,226 @@ fn perim_segment_rect(x: f32, y: f32, w: f32, h: f32, t: f32, s0: f32, s1: f32) 
     }
 }
 
+/// Chucker hit flash — a quick bright bloom on the cup.
+pub fn draw_chucker_flash(cx: f32, cy: f32, life: f32, max_life: f32) {
+    let p = (life / max_life).clamp(0.0, 1.0);
+    let r = 30.0 + (1.0 - p) * 40.0;
+    let alpha = p * 0.55;
+    draw_circle(cx, cy, r, Color::new(1.0, 1.0, 0.7, alpha));
+    draw_circle(cx, cy, r * 0.55, Color::new(1.0, 0.95, 0.4, alpha * 1.4));
+    // Rim glow ring
+    for i in 0..12 {
+        let a = (i as f32 / 12.0) * std::f32::consts::TAU;
+        let rx = cx + a.cos() * (r * 0.9);
+        let ry = cy + a.sin() * (r * 0.9);
+        draw_circle(rx, ry, 2.0 + (1.0 - p) * 3.0, Color::new(1.0, 0.8, 0.2, alpha));
+    }
+}
+
+/// Character silhouette cut-in (mid/premium/confirmed reaches).
+/// Slides in from a corner, holds, slides out. tier determines color + corner.
+pub fn draw_cutin(sw: f32, sh: f32, tier_ord: i32, elapsed: f32, reach_t: f32) {
+    let total_life = (elapsed + reach_t).max(0.0001);
+    // Slide-in: first 0.3s. Slide-out: last 0.4s of reach_t < 0.4 (after reach_t expires).
+    let slide_in_dur = 0.3;
+    let _slide_out_dur = 0.4;
+    let appearing = elapsed < slide_in_dur;
+    let leaving = reach_t <= 0.0 && elapsed > 0.0; // reach ended
+
+    let progress: f32 = if appearing {
+        (elapsed / slide_in_dur).clamp(0.0, 1.0)
+    } else if leaving {
+        0.0 // for the snap-out we just instantly hide
+    } else {
+        1.0
+    };
+
+    // From which corner — alternate by tier to vary the framing.
+    let from_left = tier_ord % 2 == 0;
+    let target_x = if from_left { sw * 0.04 } else { sw * 0.74 };
+    let off_x = if from_left { -sw * 0.28 } else { sw * 1.04 };
+    let x = off_x + (target_x - off_x) * progress;
+    let y = sh * 0.36;
+    let w = sw * 0.22;
+    let h = sh * 0.36;
+
+    // Colors per tier
+    let (tint, accent, name) = match tier_ord {
+        1 => (Color::from_rgba(180, 180, 220, 200), Color::from_rgba(220, 220, 240, 255), "FLASHBACK"),
+        2 => (Color::from_rgba(255, 200, 80, 220), Color::from_rgba(255, 230, 120, 255), "PREPARATION"),
+        3 => (Color::from_rgba(255, 120, 40, 230), Color::from_rgba(255, 180, 80, 255), "THE  CONFRONTATION"),
+        4 => (Color::from_rgba(255, 60, 60, 250), Color::from_rgba(255, 220, 200, 255), "IT  ENDS  TONIGHT"),
+        _ => (Color::from_rgba(180, 180, 220, 200), Color::from_rgba(220, 220, 240, 255), ""),
+    };
+
+    let alpha = progress;
+    // Shadow + body — a stylized silhouette frame
+    draw_rectangle(x + 6.0, y + 6.0, w, h, Color::new(0.0, 0.0, 0.0, 0.45 * alpha));
+    draw_rectangle(x, y, w, h, Color::new(0.05, 0.05, 0.10, 0.85 * alpha));
+    draw_rectangle_lines(x, y, w, h, 3.0, accent);
+
+    // Diagonal accent stripes
+    for i in 0..6 {
+        let off = i as f32 * 22.0;
+        draw_line(x + off, y, x + off - 30.0, y + h, 1.0, Color::new(tint.r, tint.g, tint.b, 0.30 * alpha));
+    }
+
+    // Silhouette: an abstract figure assembled from rects/circles.
+    // Head + body + sword (for the protagonist)
+    let cx = x + w * 0.5;
+    let head_r = h * 0.10;
+    draw_circle(cx, y + h * 0.20, head_r, Color::new(tint.r, tint.g, tint.b, 0.90 * alpha));
+    // Body trapezoid
+    draw_rectangle(cx - w * 0.18, y + h * 0.30, w * 0.36, h * 0.40,
+                   Color::new(tint.r, tint.g, tint.b, 0.85 * alpha));
+    // Arms
+    draw_rectangle(cx - w * 0.36, y + h * 0.33, w * 0.18, h * 0.06,
+                   Color::new(tint.r, tint.g, tint.b, 0.85 * alpha));
+    draw_rectangle(cx + w * 0.18, y + h * 0.33, w * 0.18, h * 0.06,
+                   Color::new(tint.r, tint.g, tint.b, 0.85 * alpha));
+    // A blade extending up
+    draw_rectangle(cx + w * 0.28, y + h * 0.05, 3.0, h * 0.50,
+                   Color::new(accent.r, accent.g, accent.b, alpha));
+    // Glint on blade
+    draw_rectangle(cx + w * 0.28, y + h * 0.06, 2.0, h * 0.10,
+                   Color::new(1.0, 1.0, 1.0, 0.7 * alpha));
+
+    // Name banner at the bottom of the panel
+    let name_m = measure_text(name, None, 18, 1.0);
+    draw_rectangle(x, y + h - 26.0, w, 26.0, Color::new(0.10, 0.05, 0.05, 0.9 * alpha));
+    draw_text(name, x + (w - name_m.width) * 0.5, y + h - 8.0, 18.0, accent);
+
+    // Tier badge in the corner
+    let badge = match tier_ord {
+        1 => "I", 2 => "II", 3 => "III", 4 => "IV", _ => "?",
+    };
+    draw_text(badge, x + 8.0, y + 24.0, 22.0, accent);
+}
+
+/// Letter-by-letter "F E V E R !!" reveal during the jackpot fanfare.
+pub fn draw_fever_reveal(sw: f32, sh: f32, t: f32) {
+    let text = "F E V E R !!";
+    let chars: Vec<char> = text.chars().collect();
+    let total_letters = chars.len();
+    // Each char appears over 0.07s; full reveal at ~total_letters * 0.07 = 0.84s
+    let per_char = 0.07;
+    let visible_letters = ((t / per_char) as usize).min(total_letters);
+    let visible_text: String = chars.iter().take(visible_letters).collect();
+
+    // Hold + slight pulse for the rest of the time
+    let size = 110.0_f32;
+    let m = measure_text(&visible_text, None, size as u16, 1.0);
+    let cx = (sw - m.width) * 0.5;
+    let cy = sh * 0.42;
+    // Background panel
+    draw_rectangle(cx - 24.0, cy - 90.0, m.width + 48.0, 120.0, Color::new(0.0, 0.0, 0.0, 0.7));
+    // Glow halo
+    for i in 0..6 {
+        let alpha = 0.10 * (1.0 - i as f32 / 6.0);
+        draw_text(&visible_text, cx + i as f32 * 1.5, cy + i as f32 * 0.5, size, Color::new(1.0, 0.9, 0.3, alpha));
+    }
+    draw_text(&visible_text, cx, cy, size, GOLD);
+}
+
+/// Directional gold rays sweeping outward from cabinet center.
+pub fn draw_gold_rays(cx: f32, cy: f32, life: f32, max_life: f32) {
+    let p = (life / max_life).clamp(0.0, 1.0);
+    let sweep_angle = (1.0 - p) * std::f32::consts::TAU * 0.5; // rotates a quarter turn over fade
+    let alpha = p * 0.55;
+    let length = 600.0 + (1.0 - p) * 300.0;
+    for i in 0..12 {
+        let a = i as f32 * std::f32::consts::TAU / 12.0 + sweep_angle;
+        let x2 = cx + a.cos() * length;
+        let y2 = cy + a.sin() * length;
+        draw_line(cx, cy, x2, y2, 4.0, Color::new(1.0, 0.85, 0.3, alpha));
+        draw_line(cx, cy, x2, y2, 1.0, Color::new(1.0, 1.0, 0.9, alpha * 1.5));
+    }
+}
+
+/// "CHANCE TIME!!" banner that slams in from the top of the screen.
+pub fn draw_kakuhen_slam(sw: f32, sh: f32, life: f32, max_life: f32) {
+    let p = (life / max_life).clamp(0.0, 1.0);
+    let total = max_life;
+    let elapsed = total - life;
+    let slam_in = 0.3;
+    // y goes from -100 (off-screen) to its target at ~sh*0.30 over the slam_in duration
+    let target_y = sh * 0.30;
+    let y = if elapsed < slam_in {
+        let q = (elapsed / slam_in).clamp(0.0, 1.0);
+        -120.0 + (target_y + 120.0) * (1.0 - (1.0 - q).powi(3))
+    } else {
+        target_y
+    };
+
+    // Alpha fade in the last 0.5s
+    let alpha = if life < 0.5 { (life / 0.5).clamp(0.0, 1.0) } else { 1.0 };
+    let _ = p;
+
+    // Banner
+    let banner_h = 80.0;
+    draw_rectangle(0.0, y, sw, banner_h, Color::new(0.85, 0.05, 0.10, 0.92 * alpha));
+    draw_rectangle(0.0, y + banner_h - 4.0, sw, 4.0, Color::new(1.0, 0.95, 0.5, alpha));
+    draw_rectangle(0.0, y, sw, 4.0, Color::new(1.0, 0.95, 0.5, alpha));
+    let text = "C H A N C E   T I M E  !!";
+    let m = measure_text(text, None, 48, 1.0);
+    let x = (sw - m.width) * 0.5;
+    draw_text(text, x + 3.0, y + 56.0, 48.0, Color::new(0.2, 0.0, 0.0, alpha));
+    draw_text(text, x, y + 54.0, 48.0, Color::new(1.0, 0.95, 0.55, alpha));
+}
+
+/// Chapter title card — wipes across the screen, holds, wipes off.
+pub fn draw_chapter_card(sw: f32, sh: f32, elapsed: f32, label: &str) {
+    // 1.0s wipe-in, 1.5s hold, 1.0s wipe-out
+    let wipe_in = 1.0;
+    let hold = 1.5;
+    let _wipe_out = 1.0;
+
+    let card_h = 120.0;
+    let card_y = sh * 0.42;
+
+    let progress: f32 = if elapsed < wipe_in {
+        (elapsed / wipe_in).clamp(0.0, 1.0)
+    } else if elapsed < wipe_in + hold {
+        1.0
+    } else {
+        let q = (elapsed - wipe_in - hold) / 1.0;
+        (1.0 - q).clamp(0.0, 1.0)
+    };
+
+    // Reveal width = full sw * progress
+    let reveal_w = sw * progress;
+    // Reveal from left or from center? Wipe from left-to-right.
+    draw_rectangle(0.0, card_y, reveal_w, card_h, Color::new(0.06, 0.04, 0.10, 0.95));
+    draw_rectangle(0.0, card_y, reveal_w, 3.0, Color::new(0.95, 0.75, 0.30, 0.95));
+    draw_rectangle(0.0, card_y + card_h - 3.0, reveal_w, 3.0, Color::new(0.95, 0.75, 0.30, 0.95));
+
+    // Text shown only when the wipe has cleared past the text position
+    let text_m = measure_text(label, None, 32, 1.0);
+    let text_x = (sw - text_m.width) * 0.5;
+    let text_visible_alpha = if elapsed < wipe_in {
+        (elapsed / wipe_in - 0.4).max(0.0)
+    } else if elapsed > wipe_in + hold {
+        progress
+    } else {
+        1.0
+    };
+    draw_text(label, text_x, card_y + 70.0, 32.0, Color::new(0.95, 0.75, 0.30, text_visible_alpha));
+    // Subtitle
+    let sub = "* * *";
+    let sub_m = measure_text(sub, None, 18, 1.0);
+    draw_text(sub, (sw - sub_m.width) * 0.5, card_y + card_h - 22.0, 18.0,
+              Color::new(0.95, 0.75, 0.30, text_visible_alpha * 0.6));
+}
+
+/// Treasure trickle floaters — small "+¥4" text rising and fading.
+pub fn draw_trickle(items: &[(f32, f32, f32, String)]) {
+    for (x, y, life, label) in items {
+        let alpha = (life / 1.2).clamp(0.0, 1.0);
+        let m = measure_text(label, None, 14, 1.0);
+        draw_text(label, x - m.width * 0.5, *y, 14.0, Color::new(1.0, 0.85, 0.35, alpha));
+    }
+}
+
 /// Marquee title strip — a thin row at the very top of the cabinet with the
 /// project name scrolling slowly across.
 pub fn draw_marquee(cab_x: f32, cab_y: f32, cab_w: f32, t: f64) {

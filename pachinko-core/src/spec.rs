@@ -46,6 +46,10 @@ pub struct SpecSheet {
 
     /// Attacker reset duration between rounds (ms). Per PRD R-9: 1500.
     pub between_rounds_ms: u32,
+
+    /// Yen value per ball — the canonical economy lever per intent C-18.
+    /// 4 = standard pachinko (¥4/ball). 1 = low-stakes "1パチ" variant.
+    pub yen_per_ball: u32,
 }
 
 impl SpecSheet {
@@ -91,6 +95,7 @@ impl SpecSheet {
             rounds_per_jackpot: 16,
             balls_per_round: 90,
             between_rounds_ms: 1500,
+            yen_per_ball: 4,
         }
     }
 

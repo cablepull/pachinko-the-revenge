@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "magnetfragnet check --if-changed",
+            "_magnetfragnet_id": "magnetfragnet/check-on-stop"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "magnetfragnet check --if-changed",
+            "_magnetfragnet_id": "magnetfragnet/check-on-edit"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit"
+      }
+    ]
+  }
+}

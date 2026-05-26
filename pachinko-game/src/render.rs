@@ -32,6 +32,33 @@ pub struct RenderState {
     pub overlay_t: f32,
     pub last_reach_tier: Option<ReachTier>,
     pub current_state_label: String,
+
+    // ---- Event animations (PRD-003 R-38) ----
+    /// Per-chucker-hit transient flashes: (x, y, life seconds remaining).
+    pub chucker_flashes: Vec<(f32, f32, f32)>,
+    /// Character cut-in (mid/premium/confirmed reaches).
+    /// elapsed = how long ago the cut-in started. 0..0.3 = slide-in, 0.3..(reach_t-0.4) = held, after = slides off.
+    pub cutin_elapsed: f32,
+    pub cutin_active: bool,
+    pub cutin_tier: Option<ReachTier>,
+    /// JACKPOT letter-by-letter reveal — elapsed time since trigger.
+    pub fever_reveal_t: f32,
+    pub fever_reveal_active: bool,
+    /// Directional gold rays during jackpot (life seconds remaining).
+    pub gold_rays_t: f32,
+    /// "CHANCE TIME!!" kakuhen-entry banner slam (life remaining).
+    pub kakuhen_slam_t: f32,
+    /// Chapter title card wipe — elapsed since trigger; total duration 3.5s.
+    pub chapter_card_elapsed: f32,
+    pub chapter_card_active: bool,
+    pub chapter_card_text: String,
+    /// "+¥4" / "+1" treasure trickle floaters rising off the chucker.
+    pub trickle: Vec<(f32, f32, f32, String)>, // (x, y, life, label)
+
+    // ---- HUD toggle (PRD-003 R-34) ----
+    pub data_lamp_visible: bool,
+    /// Glow-pulse decay when there's new info to see.
+    pub data_lamp_glow_t: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -59,7 +86,54 @@ impl RenderState {
             overlay_t: 0.0,
             last_reach_tier: None,
             current_state_label: "BASE".into(),
+            chucker_flashes: Vec::new(),
+            cutin_elapsed: 0.0,
+            cutin_active: false,
+            cutin_tier: None,
+            fever_reveal_t: 0.0,
+            fever_reveal_active: false,
+            gold_rays_t: 0.0,
+            kakuhen_slam_t: 0.0,
+            chapter_card_elapsed: 0.0,
+            chapter_card_active: false,
+            chapter_card_text: String::new(),
+            trickle: Vec::new(),
+            data_lamp_visible: false,
+            data_lamp_glow_t: 0.0,
         }
+    }
+
+    pub fn trigger_chucker_flash(&mut self, x: f32, y: f32) {
+        self.chucker_flashes.push((x, y, 0.4));
+        self.trickle.push((x, y - 8.0, 0.7, "+¥4".to_string()));
+    }
+    pub fn trigger_cutin(&mut self, tier: ReachTier) {
+        self.cutin_active = true;
+        self.cutin_elapsed = 0.0;
+        self.cutin_tier = Some(tier);
+    }
+    pub fn end_cutin(&mut self) {
+        self.cutin_active = false;
+        self.cutin_tier = None;
+    }
+    pub fn trigger_fever_reveal(&mut self) {
+        self.fever_reveal_active = true;
+        self.fever_reveal_t = 0.0;
+        self.gold_rays_t = 2.5;
+    }
+    pub fn trigger_kakuhen_slam(&mut self) {
+        self.kakuhen_slam_t = 2.3;
+    }
+    pub fn trigger_chapter_card(&mut self, label: impl Into<String>) {
+        self.chapter_card_active = true;
+        self.chapter_card_elapsed = 0.0;
+        self.chapter_card_text = label.into();
+    }
+    pub fn trigger_data_lamp_glow(&mut self) {
+        self.data_lamp_glow_t = 2.0;
+    }
+    pub fn spawn_payout_trickle(&mut self, x: f32, y: f32, amount: u32) {
+        self.trickle.push((x, y, 1.2, format!("+¥{}", amount * 4)));
     }
 
     /// Start a spin animation. Stagger the stops in [t0, t1, t2] seconds.
@@ -112,6 +186,24 @@ impl RenderState {
         self.round_t = (self.round_t - dt).max(0.0);
         self.overlay_t = (self.overlay_t - dt).max(0.0);
 
+        // Event-animation timers
+        for f in self.chucker_flashes.iter_mut() { f.2 -= dt; }
+        self.chucker_flashes.retain(|f| f.2 > 0.0);
+        if self.cutin_active { self.cutin_elapsed += dt; }
+        if self.fever_reveal_active {
+            self.fever_reveal_t += dt;
+            if self.fever_reveal_t > 2.5 { self.fever_reveal_active = false; }
+        }
+        self.gold_rays_t = (self.gold_rays_t - dt).max(0.0);
+        self.kakuhen_slam_t = (self.kakuhen_slam_t - dt).max(0.0);
+        if self.chapter_card_active {
+            self.chapter_card_elapsed += dt;
+            if self.chapter_card_elapsed > 3.5 { self.chapter_card_active = false; }
+        }
+        for tr in self.trickle.iter_mut() { tr.1 -= 40.0 * dt; tr.2 -= dt; }
+        self.trickle.retain(|t| t.2 > 0.0);
+        self.data_lamp_glow_t = (self.data_lamp_glow_t - dt).max(0.0);
+
         // Reels — advance offset while spinning, snap when countdown expires.
         for i in 0..3 {
             if self.reel_targets[i].is_none() && self.reel_speed[i] > 0.0 {
@@ -155,6 +247,10 @@ pub fn draw_cabinet(
     balls_fired: u32,
     balls_returned: u32,
     launcher_active: bool,
+    pl_yen: i64,
+    kakuhen_streak: u32,
+    yen_per_ball: u32,
+    total_spins: u64,
 ) {
     clear_background(Color::from_rgba(8, 6, 16, 255));
 
@@ -368,18 +464,59 @@ pub fn draw_cabinet(
                 pf.chucker_r * 0.3, Color::new(1.0, 1.0, 1.0, 0.4));
     draw_text("HESO", pf.chucker_cx - 18.0, pf.chucker_cy + 4.0, 14.0, BLACK);
 
-    // Data lamp HUD (top right). Made taller to fit BALLS FIRED/RETURNED.
-    draw_data_lamp(
-        sw - 260.0 - 8.0, 8.0, 260.0, 226.0,
-        spins_since_jp, last_jp_history,
-        cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach,
-        kakuhen_remaining, balls_won, total_jackpots,
-        balls_fired, balls_returned,
-    );
+    // ---- Data lamp HUD (toggleable per PRD-003 R-34) ----
+    // The toggle button (small "i" icon) is always visible; the panel only
+    // when toggled on. Glow-pulse the button when there's new info.
+    draw_lamp_toggle(sw, rs.data_lamp_visible, rs.data_lamp_glow_t);
+    if rs.data_lamp_visible {
+        draw_data_lamp(
+            sw - 260.0 - 8.0, 50.0, 260.0, 286.0,
+            spins_since_jp, last_jp_history,
+            cab_state == CabinetState::KakuhenBase || cab_state == CabinetState::KakuhenReach,
+            kakuhen_remaining, balls_won, total_jackpots,
+            balls_fired, balls_returned,
+            unlocked_chapter, total_spins, yen_per_ball,
+        );
+    }
+
+    // ---- ALWAYS-VISIBLE P/L INDICATOR (PRD-003 R-40) ----
+    draw_pl_indicator(sw, pl_yen);
+
+    // ---- STREAK MULTIPLIER (PRD-003 R-42) — visible only during a kakuhen chain ----
+    if kakuhen_streak >= 2 {
+        draw_streak_multiplier(sw, sh, kakuhen_streak, get_time());
+    }
+
+    // ---- CHUCKER HIT FLASHES (PRD-003 R-38) ----
+    for (fx, fy, life) in &rs.chucker_flashes {
+        scene::draw_chucker_flash(*fx, *fy, *life, 0.4);
+    }
+
+    // ---- TREASURE TRICKLE FLOATERS ----
+    scene::draw_trickle(&rs.trickle);
 
     // ---- ANIMATED BEZEL LIGHTING (PRD-003 R-37) ----
     // Drawn on top of the static bezel so the light strips read as glow.
     scene::draw_bezel_lighting(cab_x, cab_y, cab_w, cab_h, cab_state, get_time());
+
+    // ---- CHARACTER CUT-IN (mid+ reaches) ----
+    if rs.cutin_active {
+        let tier_ord = match rs.cutin_tier {
+            Some(ReachTier::Calm) => 1,
+            Some(ReachTier::Mid) => 2,
+            Some(ReachTier::Premium) => 3,
+            Some(ReachTier::Confirmed) => 4,
+            None => 0,
+        };
+        if tier_ord >= 2 {
+            scene::draw_cutin(sw, sh, tier_ord, rs.cutin_elapsed, rs.reach_t);
+        }
+    }
+
+    // ---- GOLD RAYS during jackpot ----
+    if rs.gold_rays_t > 0.0 {
+        scene::draw_gold_rays(sw * 0.5, sh * 0.5, rs.gold_rays_t, 2.5);
+    }
 
     // Particles (jackpot confetti)
     for p in &rs.particles {
@@ -394,8 +531,23 @@ pub fn draw_cabinet(
         draw_rectangle(0.0, 0.0, sw, sh, Color::new(1.0, 1.0, 0.7, a));
     }
 
-    // Overlay text (FEVER!!, big jackpot banner)
-    if rs.overlay_t > 0.0 {
+    // ---- KAKUHEN SLAM BANNER ----
+    if rs.kakuhen_slam_t > 0.0 {
+        scene::draw_kakuhen_slam(sw, sh, rs.kakuhen_slam_t, 2.3);
+    }
+
+    // ---- CHAPTER TITLE CARD ----
+    if rs.chapter_card_active {
+        scene::draw_chapter_card(sw, sh, rs.chapter_card_elapsed, &rs.chapter_card_text);
+    }
+
+    // ---- FEVER REVEAL (letter-by-letter) ----
+    if rs.fever_reveal_active {
+        scene::draw_fever_reveal(sw, sh, rs.fever_reveal_t);
+    }
+
+    // Overlay text (other banners — reach tier name, etc.)
+    if rs.overlay_t > 0.0 && !rs.fever_reveal_active {
         let m = measure_text(&rs.overlay_text, None, 96, 1.0);
         let bx = (sw - m.width) * 0.5;
         let by = sh * 0.45;
@@ -406,8 +558,86 @@ pub fn draw_cabinet(
     // Bottom HUD: knob hint
     draw_text("[SPACE / CLICK]  pull chucker     [R]  reset session", 14.0, sh - 14.0, 20.0, Color::new(1.0, 1.0, 1.0, 0.75));
 
-    // State debug strip (small)
-    draw_text(&format!("state: {:?}", cab_state), 14.0, 22.0, 18.0, Color::new(0.5, 0.7, 1.0, 0.8));
+    // State debug strip — only when data lamp is visible (keep clean by default)
+    if rs.data_lamp_visible {
+        draw_text(&format!("state: {:?}", cab_state), 14.0, 22.0, 14.0, Color::new(0.5, 0.7, 1.0, 0.7));
+    }
+}
+
+// ---- HUD helpers (PRD-003 R-34, R-40, R-42) ----
+
+fn draw_lamp_toggle(sw: f32, visible: bool, glow_t: f32) {
+    // Small "i" circular button just below the top-right corner of the canvas.
+    let cx = sw - 26.0;
+    let cy = 26.0;
+    let r = 14.0;
+    // Drop shadow
+    draw_circle(cx + 2.0, cy + 2.0, r, Color::new(0.0, 0.0, 0.0, 0.5));
+    let base_col = if visible {
+        Color::from_rgba(243, 181, 74, 230)
+    } else {
+        Color::from_rgba(60, 40, 20, 230)
+    };
+    draw_circle(cx, cy, r, base_col);
+    draw_circle_lines(cx, cy, r, 2.0, Color::from_rgba(243, 181, 74, 255));
+
+    // Glow pulse when there's new info (glow_t > 0) and the lamp is hidden
+    if !visible && glow_t > 0.0 {
+        let pulse = (glow_t * 3.0).sin().abs();
+        let ring_alpha = 0.4 * (glow_t / 2.0).clamp(0.0, 1.0);
+        draw_circle_lines(cx, cy, r + 4.0 + pulse * 4.0, 2.0,
+            Color::new(1.0, 0.85, 0.3, ring_alpha));
+    }
+
+    // The "i" letter
+    let label = if visible { "X" } else { "i" };
+    let m = measure_text(label, None, 18, 1.0);
+    let text_col = if visible { Color::from_rgba(40, 20, 10, 255) } else { Color::from_rgba(243, 181, 74, 255) };
+    draw_text(label, cx - m.width * 0.5, cy + 6.0, 18.0, text_col);
+
+    // Hint text just below the button (small)
+    draw_text("H / Esc", cx - 22.0, cy + r + 18.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.35));
+}
+
+fn draw_pl_indicator(sw: f32, pl_yen: i64) {
+    // Top-center, slightly inset. The one HUD element that survives the toggle.
+    let label = if pl_yen >= 0 {
+        format!("+ ¥{}", pl_yen)
+    } else {
+        format!("- ¥{}", -pl_yen)
+    };
+    let color = if pl_yen > 0 {
+        Color::from_rgba(120, 240, 140, 230)
+    } else if pl_yen < 0 {
+        Color::from_rgba(240, 130, 130, 230)
+    } else {
+        Color::from_rgba(220, 220, 220, 200)
+    };
+    let m = measure_text(&label, None, 22, 1.0);
+    let x = (sw - m.width) * 0.5;
+    let y = 30.0;
+    // Slim panel background
+    draw_rectangle(x - 14.0, y - 22.0, m.width + 28.0, 32.0, Color::new(0.0, 0.0, 0.0, 0.45));
+    draw_rectangle(x - 14.0, y + 8.0, m.width + 28.0, 2.0, Color::new(color.r, color.g, color.b, 0.5));
+    draw_text("P / L", x - m.width * 0.0 - 50.0, y, 14.0, Color::from_rgba(160, 160, 180, 200));
+    draw_text(&label, x, y, 22.0, color);
+}
+
+fn draw_streak_multiplier(sw: f32, sh: f32, streak: u32, t: f64) {
+    // Pulsing badge on the right side of the screen
+    let pulse = (t as f32 * 3.0).sin() * 0.5 + 0.5;
+    let label = format!("STREAK  x{streak}");
+    let m = measure_text(&label, None, 32, 1.0);
+    let x = sw - m.width - 30.0;
+    let y = sh * 0.30;
+    let bg_alpha = 0.7 + 0.2 * pulse;
+    let glow_alpha = 0.35 + 0.30 * pulse;
+    // Glow halo
+    draw_rectangle(x - 18.0, y - 30.0, m.width + 36.0, 48.0,
+        Color::new(1.0, 0.7, 0.2, glow_alpha * 0.3));
+    draw_rectangle(x - 14.0, y - 26.0, m.width + 28.0, 40.0,
+        Color::new(0.20, 0.05, 0.05, bg_alpha));
+    draw_text(&label, x, y, 32.0, Color::from_rgba(255, 220, 100, 230));
 }
 
 fn state_tint(s: CabinetState) -> Color {
@@ -472,27 +702,36 @@ fn draw_reel(x: f32, y: f32, w: f32, h: f32, offset: f32, target: Option<u8>) {
     draw_rectangle(x - 4.0, y + h, w + 8.0, 6.0, Color::from_rgba(20, 12, 28, 255));
 }
 
-fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32, balls_won: u64, total_jackpots: u32, balls_fired: u32, balls_returned: u32) {
-    draw_rectangle(x, y, w, h, Color::from_rgba(30, 20, 60, 230));
+fn draw_data_lamp(x: f32, y: f32, w: f32, h: f32, spins_since: u32, history: &[u32], in_kakuhen: bool, remaining: u32, balls_won: u64, total_jackpots: u32, balls_fired: u32, balls_returned: u32, unlocked_chapter: u32, total_spins: u64, yen_per_ball: u32) {
+    // Drop shadow + panel
+    draw_rectangle(x + 5.0, y + 5.0, w, h, Color::new(0.0, 0.0, 0.0, 0.55));
+    draw_rectangle(x, y, w, h, Color::from_rgba(30, 20, 60, 240));
     draw_rectangle_lines(x, y, w, h, 2.0, GOLD);
     draw_text("DATA  LAMP", x + 8.0, y + 22.0, 18.0, GOLD);
-    draw_text("v0.2", x + w - 36.0, y + 22.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
+    draw_text("v0.3", x + w - 36.0, y + 22.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
 
-    draw_text(&format!("SPINS  {spins_since:>4}"), x + 8.0, y + 50.0, 20.0, WHITE);
+    draw_text(&format!("SPINS  {spins_since:>4}"), x + 8.0, y + 50.0, 22.0, WHITE);
 
     let label = if in_kakuhen { format!("KAKUHEN  ST {remaining}") } else { "BASE PLAY".into() };
-    draw_text(&label, x + 8.0, y + 74.0, 16.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
+    draw_text(&label, x + 8.0, y + 74.0, 18.0, if in_kakuhen { Color::from_rgba(255, 120, 60, 255) } else { Color::from_rgba(120, 180, 255, 255) });
 
-    // Ball-tray HUD (PRD-002 R-32).
+    // ---- Ball-tray HUD with yen pairing (PRD-003 R-39) ----
     let return_pct = if balls_fired > 0 { (balls_returned as f32 / balls_fired as f32 * 100.0) as i32 } else { 0 };
-    draw_text(&format!("FIRED      {balls_fired:>5}"), x + 8.0, y + 100.0, 14.0, Color::from_rgba(180, 200, 220, 255));
-    draw_text(&format!("RETURNED   {balls_returned:>5}"), x + 8.0, y + 118.0, 14.0, Color::from_rgba(180, 200, 220, 255));
-    draw_text(&format!("RATE       {return_pct:>4}%"), x + 8.0, y + 136.0, 14.0, Color::from_rgba(180, 200, 220, 255));
+    let fired_yen = balls_fired as u64 * yen_per_ball as u64;
+    let returned_yen = balls_returned as u64 * yen_per_ball as u64;
+    draw_text(&format!("FIRED     {balls_fired:>5}  ¥{fired_yen}"),    x + 8.0, y + 100.0, 14.0, Color::from_rgba(180, 200, 220, 255));
+    draw_text(&format!("RETURNED  {balls_returned:>5}  ¥{returned_yen}"), x + 8.0, y + 118.0, 14.0, Color::from_rgba(180, 200, 220, 255));
+    draw_text(&format!("RATE      {return_pct:>4}%"), x + 8.0, y + 136.0, 14.0, Color::from_rgba(180, 200, 220, 255));
 
+    let won_yen = balls_won * yen_per_ball as u64;
     draw_text(&format!("JACKPOTS  {total_jackpots:>3}"), x + 8.0, y + 158.0, 14.0, Color::from_rgba(255, 220, 130, 255));
-    draw_text(&format!("BALLS WON  {balls_won}"), x + 8.0, y + 176.0, 14.0, Color::from_rgba(255, 220, 130, 255));
+    draw_text(&format!("WON       {balls_won}  ¥{won_yen}"), x + 8.0, y + 176.0, 14.0, Color::from_rgba(255, 220, 130, 255));
 
-    let bar_y = y + 192.0;
+    // Session-level stats (was the top-left dev text; lives here now)
+    draw_text(&format!("CHAPTER   {unlocked_chapter}"), x + 8.0, y + 200.0, 14.0, Color::from_rgba(180, 200, 220, 200));
+    draw_text(&format!("TOTAL SP  {total_spins}"), x + 8.0, y + 218.0, 14.0, Color::from_rgba(180, 200, 220, 200));
+
+    let bar_y = y + 244.0;
     let max_bar_h = 28.0;
     let bar_w = (w - 16.0) / 10.0;
     let max_v = history.iter().copied().max().unwrap_or(1).max(1);

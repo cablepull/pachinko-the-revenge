@@ -73,6 +73,9 @@ async fn main() {
     let mut last_jp_history: Vec<u32> = Vec::new();
     let mut spins_at_last_jp: u32 = 0;
     let mut balls_won_total: u64 = 0;
+    let mut kakuhen_streak: u32 = 0;
+    let mut prev_total_jp: u32 = 0;
+    let mut in_kakuhen_prev: bool = false;
 
     let mut session_start_time = get_time();
 
@@ -114,6 +117,19 @@ async fn main() {
             balls.clear();
             balls_fired_total = 0;
             balls_returned_total = 0;
+            kakuhen_streak = 0;
+            prev_total_jp = 0;
+        }
+
+        // Data-lamp toggle (PRD-003 R-34)
+        if is_key_pressed(KeyCode::H) || is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Tab) {
+            rs.data_lamp_visible = !rs.data_lamp_visible;
+            if rs.data_lamp_visible { rs.data_lamp_glow_t = 0.0; }
+        }
+        // Click on the data-lamp toggle button (drawn in render::draw_lamp_toggle)
+        if is_mouse_button_pressed(MouseButton::Right) {
+            // Right-click anywhere also toggles — keep an obvious keyboard-free path
+            rs.data_lamp_visible = !rs.data_lamp_visible;
         }
 
         // ---- LAUNCH (PRD-002 R-25) — hold SPACE / mouse to spawn balls ----
@@ -136,6 +152,10 @@ async fn main() {
         for _ in 0..phys.chucker_entries {
             // Chucker chime — PRD R-15
             audio::play_one(&bank.chucker_chime, 0.8);
+            // Visual chucker-hit flash + treasure trickle (PRD-003 R-38, R-43)
+            rs.trigger_chucker_flash(pf.chucker_cx, pf.chucker_cy);
+            // New info — pulse the data-lamp glow even if hidden
+            rs.trigger_data_lamp_glow();
 
             let ev = session.pull_chucker();
             match ev {
@@ -163,7 +183,6 @@ async fn main() {
                             current_bgm = BgmTrack::Reach;
                         }
                         // Show banner text — tier name + a tiny story hint per tier.
-                        // (Players learn the hierarchy by watching which one fires.)
                         match tier {
                             ReachTier::Calm => rs.show_overlay("CALM REACH  ::  flashback", dur),
                             ReachTier::Mid => rs.show_overlay("MID REACH  ::  preparing", dur),
@@ -174,6 +193,8 @@ async fn main() {
                                 rs.shake(dur);
                             }
                         }
+                        // Character cut-in for mid+ tiers (PRD-003 R-38)
+                        rs.trigger_cutin(tier);
                     }
                 }
                 SessionEvent::JackpotStart => {
@@ -181,16 +202,24 @@ async fn main() {
                     rs.flash(0.5);
                     let payout = session.spec.rounds_per_jackpot as u64 * session.spec.balls_per_round as u64;
                     balls_won_total += payout;
-                    rs.show_overlay(format!("F E V E R !!   +{payout} BALLS"), 2.8);
+                    let yen = payout * session.spec.yen_per_ball as u64;
+                    // Streak counter — only meaningful inside kakuhen
+                    if in_kakuhen_prev { kakuhen_streak += 1; } else { kakuhen_streak = 1; }
+                    // Trigger FEVER letter-by-letter reveal (PRD-003 R-38)
+                    rs.trigger_fever_reveal();
+                    rs.show_overlay(format!("+{payout} BALLS  /  +¥{yen}"), 3.5);
                     audio::play_one(&bank.hit_fanfare, 1.0);
                     audio::play_one(&bank.jackpot_fanfare, 1.0);
                     fanfare_timer = 6.0;
                     rs.spawn_jackpot_particles(screen_width() * 0.5, screen_height() * 0.5);
+                    rs.spawn_payout_trickle(pf.chucker_cx, pf.chucker_cy - 20.0, payout as u32);
+                    rs.end_cutin();
                     let gap = session.state.total_spins as u32 - spins_at_last_jp;
                     spins_at_last_jp = session.state.total_spins as u32;
                     last_jp_history.insert(0, gap);
                     last_jp_history.truncate(10);
                     round_timer = 1.4;
+                    rs.trigger_data_lamp_glow();
                 }
                 SessionEvent::EnterKakuhen | SessionEvent::ExitKakuhen | SessionEvent::JackpotEnd | SessionEvent::RoundAdvanced { .. } | SessionEvent::NoChange => {}
             }
@@ -232,13 +261,26 @@ async fn main() {
                 4 => "CHAPTER 4  ::  it ends tonight",
                 _ => "NEW CHAPTER UNLOCKED",
             };
-            rs.show_overlay(label.to_string(), 3.0);
+            // Full title-card wipe instead of plain text overlay (PRD-003 R-38)
+            rs.trigger_chapter_card(label);
         }
 
         // ---- DRAW ----
         let kak_remaining = if matches!(session.coord.state, CabinetState::KakuhenBase | CabinetState::KakuhenReach) {
             session.spec.st_window.saturating_sub(session.coord.kakuhen_window_spins)
         } else { 0 };
+
+        // Update kakuhen tracking for streak detection
+        let in_kakuhen_now = matches!(session.coord.state, CabinetState::KakuhenBase | CabinetState::KakuhenReach);
+        if !in_kakuhen_now && in_kakuhen_prev {
+            kakuhen_streak = 0; // kakuhen ended
+        }
+        in_kakuhen_prev = in_kakuhen_now;
+        let _ = prev_total_jp;
+
+        let balls_fired_yen = balls_fired_total as i64 * session.spec.yen_per_ball as i64;
+        let balls_won_yen = balls_won_total as i64 * session.spec.yen_per_ball as i64;
+        let pl_yen = balls_won_yen - balls_fired_yen;
 
         render::draw_cabinet(
             &rs,
@@ -255,17 +297,10 @@ async fn main() {
             balls_fired_total,
             balls_returned_total,
             space_held,
-        );
-
-        // Session stats overlay (small text top-left below state)
-        draw_text(
-            &format!("spins {}  /  JP {}  /  chapter {}  /  balls won {}",
-                session.state.total_spins,
-                session.state.total_jackpots,
-                session.state.unlocked_chapter,
-                balls_won_total),
-            14.0, 44.0, 16.0,
-            Color::new(0.6, 0.85, 1.0, 0.8),
+            pl_yen,
+            kakuhen_streak,
+            session.spec.yen_per_ball,
+            session.state.total_spins,
         );
 
         next_frame().await;
@@ -323,7 +358,8 @@ fn handle_state_transition(
             audio::stop(&bank.reach_bgm);
             audio::play_loop(&bank.kakuhen_bgm, 0.7);
             *current_bgm = BgmTrack::Kakuhen;
-            rs.show_overlay("KAKUHEN  START!!", 2.5);
+            // Per PRD-003 R-38: kakuhen entry → slam banner instead of plain overlay
+            rs.trigger_kakuhen_slam();
             rs.flash(0.5);
         }
         (CabinetState::Reach, CabinetState::Base) | (CabinetState::KakuhenReach, CabinetState::KakuhenBase) => {
