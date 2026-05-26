@@ -1,0 +1,28 @@
+{
+  "id": "audit-002-iter4-design-direction-2026-05-25",
+  "title": "Iteration 4 design direction — should the headline be 釘調整 nail-adjustment?",
+  "subtitle": "ACH-shaped analysis of two parallel subagent design proposals (UI redesign and mechanics redesign). The two analyses converged on nail-adjustment as the headline; this audit interrogates whether that convergence is load-bearing evidence or shared-anchor artifact.",
+  "version": "1.0",
+  "date": "2026-05-25",
+  "analyst": "claude-opus-4-7",
+  "analyticQuestion": "Iter 1→2→3 each shipped a clear directional bet (math, ball physics, theatre). Iter 4 was framed by both subagents as a directional choice with several mutually-exclusive candidates: nail-adjustment 釘調整 (player tunes pin layout), session arc shaping (4-phase pacing + chapter-scaled ST window), reach engineering (sharpen the near-miss / legibility gradient), economy deepening (1パチ mode + streak teeth), or cinematic narrative theatre. Both subagents independently recommended 釘調整 as the headline. Which hypothesis best explains *why* — and is that recommendation actually the right call for iter 4, or is the convergence an artifact of shared prior?",
+  "keyJudgment": {
+    "summary": "Iter 4 should ship Direction A/C (nail-adjustment 釘調整 as the headline mechanic) as the trunk, with a small salvage package grafted in: CJK subset font + parlor ambient audio (from UI Direction A), session-end summary screen (from mechanics Direction B), and a welcome-back continuity card (from UI Direction D). H1 (fit — the recommendation matches the project's accumulated learning and empirical signal) is the strongest hypothesis. H3 (posthoc — both subagents may have been anchored by skill §10 iter-3 which I authored) is real but partially diagnostic: the same prior also surfaces a falsifiable test (chucker rate target 25–40%) which is the actual lever. The path forward must explicitly address two preconditions before PRD-004 commits: (a) a C-2 ADR redeclaring ベース as a *derived measurement* not a configured spec quantity, since R-29's wording presupposes a static rate; and (b) a UX call on whether the 釘調整 mode is hidden-by-default (mirroring the data-lamp pattern) — if it isn't, it risks failing skill §14 test 1 (the 30-second sniff test) by reading as a video-game options menu.",
+    "confidence": "moderate-to-high"
+  },
+  "remainingGaps": [
+    "Headless probes cannot validate skill §14 test 4 (2-hour pacing) or test 5 (leave-on-your-own with a story to tell). The recommendation rests on these being the gaps to close, but neither was directly measured — they are inferred from session-length theory (skill §12.6) and convergent expert opinion.",
+    "The back-panel-as-reach-cue substitution (UI Direction C, change 3) has not been A/B tested for legibility. Replacing banner overlays with environmental cues *could* fail PRD-001 R-1 / skill §13.3's information-richness contract if the gradient becomes less crisp under variance.",
+    "Persistence shim choice (intent open question 6) is now on iter 4's critical path for both 釘調整 layouts AND the welcome-back card. The decision has been deferred since iter 1.",
+    "Audio crossfade primitive (intent open question 7) is on the critical path for reach-as-environmental-cue grammar. iter 3 ships with a hard-cut acknowledged in PRD-003 §Platform notes.",
+    "The CJK subset font WASM size cost has not been measured against C-13's minimal-harness spirit. Skill §10 iter-1 estimates 50–100 KB; current WASM is ~520 KB. A +15–20% size hit may or may not be acceptable.",
+    "Subagent anchoring: both subagents read skill §10 iter-3 which contains a written recommendation for nail-adjustment. The convergence may reflect that prior more than independent reasoning. Mitigation: this audit names H3 (posthoc) explicitly so the codification phase can pressure-test the recommendation against the alternatives.",
+    "No real-human playtest has run against any v0.x. All evidence is artifact + research; user feedback in the project is from the project owner playing their own creation, which is necessary but not sufficient for the 30-sec / 5-min / 30-min acceptance gates."
+  ],
+  "triggerEvent": [
+    "User /goal: 'use subagents and use the intelligence analysis skill and the pachinko skill together to redesign the ui and game mechanics and document them to overhaul the game'. The goal explicitly requested ACH-shaped synthesis of subagent design proposals.",
+    "magnetfragnet's nudge-9-architecture-audit has fired every iteration since audit-001 closed (counter at 4 after the iter-3.1 skill expansion). This audit is the natural close before PRD-004 lands more architecture surface.",
+    "Two parallel subagents (general-purpose) wrote research/iter4-ui-options.md and research/iter4-mechanics-options.md; both independently named nail-adjustment 釘調整 as their recommended direction."
+  ],
+  "iterationNumber": 11
+}

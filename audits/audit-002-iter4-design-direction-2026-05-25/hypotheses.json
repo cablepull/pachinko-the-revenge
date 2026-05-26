@@ -1,0 +1,88 @@
+{
+  "scoreScale": {
+    "+2": "strongly supports",
+    "+1": "supports",
+    "0":  "neutral / not diagnostic",
+    "-1": "contradicts",
+    "-2": "strongly contradicts"
+  },
+  "confidenceScale": {
+    "low": { "weight": 1, "label": "Single signal, easily overturned" },
+    "moderate": { "weight": 2, "label": "Multiple consistent signals, alternatives not ruled out" },
+    "moderate-to-high": { "weight": 3, "label": "Convergent evidence, primary alternatives weakened" },
+    "high": { "weight": 4, "label": "Strong convergent evidence, alternatives unlikely" },
+    "very-high": { "weight": 5, "label": "Multiple independent strong signals, alternatives effectively ruled out" }
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "shortLabel": "釘調整 is the right headline (mundane fit)",
+      "label": "Iteration 4 should ship nail-adjustment 釘調整 as the headline mechanic because it (a) closes the only empirically-measured PRD violation (~15% chucker rate vs PRD-002 R-29's 25–40% target), (b) was named explicitly by the project's own accumulating skill (§10 iter-3 closing recommendation), (c) is the only candidate that adds a genuinely new player input rather than polishing the existing surface, and (d) was independently surfaced by both parallel UI and mechanics subagents",
+      "description": "The recommendation matches the project's accumulated learning, the empirical signal, and convergent expert (subagent) opinion. It is the 'mundane fit' explanation — not a bold or surprising claim, just the synthesis of the evidence the project has built up. The hypothesis includes the supporting design choices: contextual minimalism (hide what isn't relevant), back-panel art as a reach signalling surface, hidden-by-default 釘調整 mode (mirroring data-lamp toggle pattern), chapter-gated unlocks (ch 1 stock layout, ch 4 full nail-adjustment), and salvage from losing directions (CJK subset font, parlor ambient audio sublayer, session-end summary, welcome-back continuity card).",
+      "assessment": "Strongest hypothesis. Survives serious challenge from H3 (posthoc anchoring) because the recommendation produces a *falsifiable* prediction — that ベース will climb from ~15% toward 25–40% as a function of player input — which can be measured headlessly. The alternative directions (B/C/D below) all generate weaker testable predictions.",
+      "confidence": "moderate-to-high",
+      "counterevidence": [
+        "The 30-second sniff-test risk (skill §14.1 test 1) is real: a tuning UI on first impression could read as 'video-game options menu' and break the 常連 cabinet identity. Mitigation must be UX-disciplined.",
+        "The ベース target band (25–40%) is itself a layout-tuning target, not a math-layer invariant — but C-2 spec sheet currently does not declare it as derived. A C-2 ADR is required before PRD-004 commits.",
+        "Subagent convergence is partially anchored by skill §10 iter-3 which already named this recommendation (see H3)."
+      ],
+      "tags": ["fit"]
+    },
+    {
+      "id": "H2",
+      "shortLabel": "釘調整 drifts from C-9 single-machine scope discipline",
+      "label": "Adding a tuning UI is a *new system* (between-session player input, persistence shim required, Monte Carlo probe UI, chapter-gated unlock progression) rather than a refinement of the existing cabinet. This may drift from intent constraint C-9 (single deep machine, MVP scope) which has been the load-bearing scope discipline since iter 1",
+      "description": "Iter 1 → 2 → 3 each added a coherent layer to the same machine: math, then physics, then theatre. Iter 4's nail-adjustment introduces a second player input loop (between-session tuning) that the cabinet has never had. It is the largest architectural delta of any iteration. C-9 says 'single machine, single arc, single save — that is the MVP scope.' A tuning system arguably stretches that.",
+      "assessment": "Real but resolvable. The drift is from the LETTER of C-9 only — still one machine, still one arc, still one save (now including the layout). The SPIRIT of C-9 is depth-over-breadth, and nail-adjustment is depth on the most authentic possible axis (real pachinko regulars do this). The mitigation is to scope iter 4 tightly: 4–6 knobs only (preset funnel clusters, not individual pin drag), chapter-gated to prevent first-impression UI leakage, and reusing iter-3's hidden-by-default + toggle-button + RenderState-driven patterns.",
+      "confidence": "moderate",
+      "counterevidence": [
+        "Skill §3 explicitly names 常連 (regulars) wanting to read machine personality — 釘調整 is precisely the depth axis the C-9 archetype values.",
+        "The chapter-gated unlock pattern (ch 1 no tuning, ch 4 full) honors C-9's single-arc constraint by tying the new system to the existing arc progression.",
+        "Effort estimate is M (heavy reuse of iter-3 patterns), not XL — proportional to iter 2's ball-physics addition which did not break C-9."
+      ],
+      "tags": ["drift"]
+    },
+    {
+      "id": "H3",
+      "shortLabel": "Subagent convergence is a posthoc artifact of shared prior",
+      "label": "Both subagents recommended 釘調整 because they both read skill §10 iter-3, which contains a written recommendation for exactly this. The 'convergent evidence' may reflect the prior more than independent reasoning. Stripping the skill prior, would the subagents have converged?",
+      "description": "Skill §10 iter-3 closing paragraph reads: 'Recommendation for iteration 4: surface the still-flat chucker rate as the gameplay lever (nail-adjustment 釘調整) rather than a static config.' This sentence was in the file when both subagents read it. Their 'independent convergence' is therefore *partly* shared anchor. A bias-aware audit must flag this and require the recommendation to stand on grounds that don't rely on the convergence claim.",
+      "assessment": "Diagnostic and partially confirmed. The convergence is anchored, BUT the underlying argument doesn't require the convergence — it rests on (a) the empirical 15% vs 25–40% gap which exists independently, and (b) the falsifiable prediction that pin layout influences ベース which is testable. H1 survives even after H3 discounts the convergence claim. However, the audit must adjust confidence DOWN from 'high' to 'moderate-to-high' because of H3, which is what the keyJudgment does.",
+      "confidence": "moderate",
+      "counterevidence": [
+        "Even with the shared prior, both subagents independently identified the 30-second-sniff-test UX risk (UI subagent Q1, mechanics subagent Q1) — that's a genuine concern they could have suppressed if they were merely echoing the skill.",
+        "Both subagents also independently recommended DROPPING the cosmetic streak multiplier per skill §11's 'no teeth → drop' rule — that's evidence they're reasoning from the skill rather than just parroting one section of it.",
+        "The mechanics subagent's runner-up (Direction B session arc) is structurally different from the UI subagent's runner-up (Direction B cinematic revenge); if they were both just echoing §10, their runner-ups would also converge."
+      ],
+      "tags": ["posthoc"]
+    },
+    {
+      "id": "H4",
+      "shortLabel": "Cherrypick — fixing the measurable gap at the cost of unmeasured ones",
+      "label": "The recommendation cherrypicks ONE concrete failure (chucker rate 15%) over the broader, harder-to-measure §14 test 4/5 gaps (2-hour pacing; leave-on-your-own with a story to tell). The mechanics subagent's runner-up Direction B explicitly targeted tests 4 + 5 directly; the recommendation overrides it in favor of the measurable target",
+      "description": "iter 1 → audit-001's H4 named this same pattern: 'we treated tested invariants as a proxy for intent satisfied, cherrypicking the measurable subset and quietly setting aside unmeasurable identity claims.' This audit must check whether iter 4 repeats that pattern. If 釘調整 ships but the 2-hour pacing and 'leave-on-your-own' tests remain unaddressed, the cabinet's session-arc and return-driver gaps persist and the user feedback loop will surface them again at iter-4 close.",
+      "assessment": "Real partial concern. The recommendation salvages session-end summary screen (Direction B.4) into the winner — this directly serves test 5 (leave-on-your-own with a story to tell). It does NOT salvage Direction B's chapter-scaled ST window or AFTERGLOW state, which are the more substantive session-arc levers. The audit should flag these as iter-5 candidates with explicit named status, not 'forgotten.'",
+      "confidence": "moderate",
+      "counterevidence": [
+        "Direction A's chapter-gated unlocks (knobs ramp up ch 1→4) is itself a session-arc mechanic — it gives the late session something the early session doesn't have.",
+        "Fixing the empirically-measured defect first is generally good discipline; iter-3's audit-001 H4 was about cherrypicking *which tests to write*, not *which defects to fix*. These are different cherrypicks.",
+        "Session summary screen salvage from B.4 does address test 5 directly with one-screen effort."
+      ],
+      "tags": ["cherrypick"]
+    },
+    {
+      "id": "H5",
+      "shortLabel": "Tension between C-3 legibility and C-15/16 emergent ベース",
+      "label": "C-3 (legible reach hierarchy, players can rank tiers by sight/sound) was easier to honor when ベース was a configured constant — the cabinet's behavior was predictable. With nail-adjustment, ベース becomes emergent from player input AND varies across sessions. The C-2 spec sheet currently says 'BASE = 35' as a canonical number; under iter 4, BASE is whatever the layout produces. This is a real tension between C-3's stability claim and C-15/16's emergent-from-physics claim",
+      "description": "Skill §11.5 names 'payout shape' as a designer lever; iter 4 transfers that lever to the player. The information content the player reads from the cabinet shifts: previously 'this is a 1/199.8 machine with 35% return,' now 'this is a 1/199.8 machine with a return rate you set.' The C-3 contract was implicitly about the SHAPE of the experience; under iter 4 the shape becomes a sub-property of the player's tuning choice.",
+      "assessment": "Strong tension; resolution is C-2-ADR-grade. The recommendation must include an ADR redeclaring ベース as a *derived measurement* with a layout-tuning target band (25–40%), not a math-layer invariant. PRD-002 R-29's wording presupposes a static rate ('chucker rate is calibrated so ~25–40 balls returned per 100 fired') — that rule needs revision to read 'TARGET CHUCKER RATE for the canonical stock layout is 25–40%; player tuning may produce rates outside this band, subject to tuning constraints documented in PRD-004.' This is not a minor change.",
+      "confidence": "high",
+      "counterevidence": [
+        "C-3 is about REACH HIERARCHY legibility, not ベース legibility — strictly speaking ベース is not in C-3's scope.",
+        "Chapter-gating the tuning unlocks (ch 1 = stock layout, no tuning) preserves the C-3 contract during the first chapter when players are still learning the hierarchy.",
+        "The honest CI display ('17.4% ± 3.2%') is itself a form of legibility — the cabinet is MORE transparent about ベース under iter 4, not less."
+      ],
+      "tags": ["tension"]
+    }
+  ]
+}

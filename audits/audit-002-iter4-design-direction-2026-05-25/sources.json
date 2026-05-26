@@ -1,0 +1,77 @@
+{
+  "sources": {
+    "S-skill-pachinko": {
+      "title": "pachinko-expertise skill — domain reference + accumulating institutional knowledge",
+      "type": "research",
+      "reliability": "A",
+      "path": ".claude/skills/pachinko-expertise/SKILL.md",
+      "commit": "3cfeb50",
+      "notes": "810 lines after iter-3.1 expansion. Sections referenced: §3 (culture, 常連 archetype), §10 (iteration log — iter-3 closing recommendation is the central anchor for this audit), §11 (game theory math — runway formula in 11.2), §12 (psychology — agency 12.4, near-miss 12.2, session arc 12.6), §13 (canon decoded — anti-patterns), §14 (success rubric)."
+    },
+    "S-intent": {
+      "title": "intent.md — 18 C-N constraints, 6 A-N assumptions, 7 open questions",
+      "type": "research",
+      "reliability": "A",
+      "path": "intent.md",
+      "commit": "3cfeb50",
+      "notes": "C-9 (single deep MVP), C-15/16 (ball physics + chucker-only spin trigger), C-17 (skill evolves with audits), C-18 (simulate economy feel). Open questions 6 (persistence) and 7 (crossfade) are now on the iter-4 critical path."
+    },
+    "S-prd-001": {
+      "title": "PRD-001: F-1 MVP Pachinko Cabinet (R-1..R-23)",
+      "type": "research",
+      "reliability": "A",
+      "path": "prd/001-mvp-pachinko-cabinet.md",
+      "commit": "3cfeb50"
+    },
+    "S-prd-002": {
+      "title": "PRD-002: F-2 Ball physics, pin field, launcher (R-24..R-33). R-29 is the chucker-rate calibration rule.",
+      "type": "research",
+      "reliability": "A",
+      "path": "prd/002-ball-physics-and-pin-field.md",
+      "commit": "3cfeb50"
+    },
+    "S-prd-003": {
+      "title": "PRD-003: F-3 Event celebrations, cabinet depth, economy (R-34..R-45)",
+      "type": "research",
+      "reliability": "A",
+      "path": "prd/003-event-celebrations-and-cabinet-depth.md",
+      "commit": "3cfeb50"
+    },
+    "S-audit-001": {
+      "title": "audit-001 — why v0.1 looks like a slot machine. The prior architecture audit; H4 (cherrypick) pattern recurrence is the basis for E5.",
+      "type": "artifact",
+      "reliability": "A",
+      "path": "audits/audit-001-cabinet-slot-vs-pachinko-2026-05-25/metadata.json",
+      "commit": "2d19120"
+    },
+    "S-subagent-ui": {
+      "title": "research/iter4-ui-options.md — UI redesign subagent's 4 competing directions + recommendation (Direction C: Contextual Minimalism + Diegetic Agency)",
+      "type": "research",
+      "reliability": "B",
+      "path": "research/iter4-ui-options.md",
+      "notes": "Authored by a general-purpose subagent invoked from this session. Reliability B because the subagent's internal reasoning is not transparent — we see the output, not the deliberation. Credibility 5 because the subagent read the same skill we did and produced a coherent, internally-consistent set of arguments."
+    },
+    "S-subagent-mech": {
+      "title": "research/iter4-mechanics-options.md — mechanics redesign subagent's 4 competing directions + recommendation (Direction A: Nail-adjustment 釘調整)",
+      "type": "research",
+      "reliability": "B",
+      "path": "research/iter4-mechanics-options.md",
+      "notes": "Same pattern as S-subagent-ui. Independent invocation; converged on the same primary recommendation."
+    },
+    "S-iter3-probe-screenshots": {
+      "title": "Iteration 3 headless playwright probe screenshots — empirical chucker rate measurement",
+      "type": "test",
+      "reliability": "B",
+      "path": "research/user-feedback-2026-05-25-iteration-3-direction.md",
+      "notes": "Chucker-rate measurement at ~15% was captured during 30s auto-fire probes. The actual screenshots live under .tmp/ (not committed; .gitignored as transient dev artifacts). The feedback note is the closest committed reference."
+    },
+    "S-render-rs": {
+      "title": "pachinko-game/src/render.rs — iter-3 rendering code",
+      "type": "artifact",
+      "reliability": "A",
+      "path": "pachinko-game/src/render.rs",
+      "commit": "3cfeb50",
+      "notes": "Source for E11 (unenforced R-44 text-size palette)."
+    }
+  }
+}

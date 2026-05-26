@@ -1,0 +1,143 @@
+{
+  "hypothesisIds": ["H1", "H2", "H3", "H4", "H5"],
+  "evidenceFamilies": {
+    "spec": "Specification docs (intent, PRD, skills)",
+    "artifact": "Shipped code / build outputs",
+    "test": "Test results / empirical measurements",
+    "research": "Subagent outputs / synthesis / external references"
+  },
+  "evidence": [
+    {
+      "id": "E1",
+      "observation": "Skill §10 iter-3 closing paragraph reads (verbatim): 'Recommendation for iteration 4: surface the still-flat chucker rate (~15%, target 25–40% per PRD-002 R-29) as the gameplay lever (nail-adjustment 釘調整) rather than a static config — let the player retune the funnel and watch the rate respond. That makes the §9 economy meaningful: better nail layouts yield better ベース which yields more chucker hits per yen spent.' This recommendation was written into the skill at iter 3 close.",
+      "sourceIds": ["S-skill-pachinko"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "very-high",
+      "families": ["spec"],
+      "scores": { "H1": 2, "H2": 0, "H3": 2, "H4": -1, "H5": 0 },
+      "notes": "Diagnostic for both H1 (the recommendation predates this audit and is project-level institutional knowledge) AND H3 (both subagents read this when making their independent recommendation). Reading H1 and H3 together: the convergence is real evidence even if anchored, because the anchor itself is a *prior audit's conclusion*, not a fresh prior."
+    },
+    {
+      "id": "E2",
+      "observation": "Two parallel general-purpose subagents (one focused on UI, one on mechanics) independently produced research notes (research/iter4-ui-options.md, research/iter4-mechanics-options.md) and both named nail-adjustment 釘調整 as their recommended Direction. The UI subagent named it 'Direction C: Contextual Minimalism + Diegetic Agency'; the mechanics subagent named it 'Direction A: Nail-adjustment 釘調整 — make ベース the agentic core.' Their reasoning chains overlap but their secondary recommendations diverged (UI: Cinematic Revenge as second-best; mechanics: Session arc as second-best).",
+      "sourceIds": ["S-subagent-ui", "S-subagent-mech"],
+      "sourceType": "research",
+      "reliability": "B",
+      "credibility": 5,
+      "diagnosticity": "high",
+      "families": ["research"],
+      "scores": { "H1": 2, "H2": 0, "H3": 1, "H4": 0, "H5": 0 },
+      "notes": "Reliability B because subagent reasoning is opaque (we see their outputs, not their full deliberation). The divergent runner-ups are diagnostic against H3 — if both subagents were merely echoing §10, their runner-ups would also converge."
+    },
+    {
+      "id": "E3",
+      "observation": "Empirical chucker rate measured at ~15% in the iter-3 headless playwright probe (5 balls/sec auto-fire for ~30 seconds, captured in the live-Pages probe screenshots iter3-final.png and similar). PRD-002 R-29 target band is 25–40%. The gap is the only empirically-measured PRD violation currently on the board.",
+      "sourceIds": ["S-prd-002", "S-iter3-probe-screenshots"],
+      "sourceType": "test",
+      "reliability": "B",
+      "credibility": 5,
+      "diagnosticity": "very-high",
+      "families": ["test"],
+      "scores": { "H1": 2, "H2": 0, "H3": 0, "H4": 2, "H5": 1 },
+      "notes": "Diagnostic for H1 (the recommendation closes a measured defect) and H4 (it IS the cherrypickable one — the other §14 tests are not measured at this horizon). Note: 30-second probe is not statistically rigorous; longer probes would tighten the CI. The 25–40% band targets the long-run average."
+    },
+    {
+      "id": "E4",
+      "observation": "Skill §11.2 gambler's-ruin runway formula: typical session runway = B/u where u = unit-loss-per-spin. For ベース at 35% vs 15%, u drops nearly in half (roughly ¥3/spin at 35% vs ¥5–6/spin at 15%). Runway approximately doubles at 35% versus 15%. This directly addresses skill §14 test 4 (2-hour pacing) by making longer sessions sustainable on the same ball budget.",
+      "sourceIds": ["S-skill-pachinko"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "high",
+      "families": ["spec"],
+      "scores": { "H1": 2, "H2": 0, "H3": 0, "H4": -1, "H5": 1 },
+      "notes": "Math-grounded prediction that closing the ベース gap *also* closes test 4 (session length) — defuses H4's cherrypick concern by showing the measured fix has a chain effect on the unmeasured gaps."
+    },
+    {
+      "id": "E5",
+      "observation": "Audit-001 (the prior architecture audit) H4 (cherrypick) was: 'We treated tested invariants as a proxy for intent satisfied, cherrypicking the measurable subset.' Iter-3's response was to add the visible event animations and economy elements that addressed parts of the unmeasured C-10/C-3 concerns, BUT skill §14 tests 4 and 5 remain unmeasured.",
+      "sourceIds": ["S-audit-001"],
+      "sourceType": "artifact",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "high",
+      "families": ["artifact"],
+      "scores": { "H1": 0, "H2": 0, "H3": 0, "H4": 2, "H5": 0 },
+      "notes": "Pattern-recurrence evidence for H4. The audit-001 cherrypick pattern is still active; iter-4 must explicitly call this out and either address the unmeasured tests or document deferral with rationale."
+    },
+    {
+      "id": "E6",
+      "observation": "Both subagents identified the same 30-second-sniff-test UX risk (UI subagent open Q3, mechanics subagent open Q1): if the tuning UI is visible on first impression, the cabinet reads as 'video-game options menu' rather than 'pachinko machine.' Both proposed the same mitigation: hidden-by-default mirroring the iter-3 data-lamp toggle pattern, plus chapter-gating (locked at chapter 1, unlocked progressively).",
+      "sourceIds": ["S-subagent-ui", "S-subagent-mech"],
+      "sourceType": "research",
+      "reliability": "B",
+      "credibility": 5,
+      "diagnosticity": "high",
+      "families": ["research"],
+      "scores": { "H1": 1, "H2": 1, "H3": -1, "H4": 0, "H5": 0 },
+      "notes": "Independent identification of the same risk + same mitigation is evidence AGAINST H3 (mere echoing) — the subagents reasoned forward to the same UX call from different starting points. Diagnostic for H2 (drift): the mitigation IS the discipline that resolves the C-9 drift concern."
+    },
+    {
+      "id": "E7",
+      "observation": "Intent open question 6 (WASM persistence shim — quad-storage vs sapp-jsutils vs other) is still open and has been on the deferred list since iter 1. PRD-001 R-18..R-20 are marked native-only in iter-3's §Platform notes section. Iter-4's nail-adjustment AND welcome-back card both need persistence; the deferred-since-iter-1 question is now on the iter-4 critical path.",
+      "sourceIds": ["S-intent", "S-prd-001"],
+      "sourceType": "spec",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "medium",
+      "families": ["spec"],
+      "scores": { "H1": -1, "H2": 1, "H3": 0, "H4": 0, "H5": 1 },
+      "notes": "Mild evidence against H1 (the chosen direction has more dependencies than its alternatives). Direction B (session arc) and Direction C (reach engineering) could ship without resolving persistence; Direction A/winner requires it. The audit's key judgment includes this in the remainingGaps."
+    },
+    {
+      "id": "E8",
+      "observation": "Intent open question 7 (BGM crossfade primitive — accept hard-cut as snap-to-keyframe grammar, vs extend quad-snd, vs swap audio crate) is also still open. Iter-3 ships with the hard-cut acknowledged in PRD-003 §Platform notes. Iter-4's contextual-minimalism direction (UI Direction C, which is part of the chosen synthesis) leans on audio crossfade for reach signalling — moving the signal from banner-text to audio-led environmental cues.",
+      "sourceIds": ["S-intent", "S-prd-003"],
+      "sourceType": "spec",
+      "reliability": "A",
+      "credibility": 5,
+      "diagnosticity": "medium",
+      "families": ["spec"],
+      "scores": { "H1": -1, "H2": 0, "H3": 0, "H4": 0, "H5": 0 },
+      "notes": "Same pattern as E7. The chosen direction unblocks-or-blocks-on previously-deferred questions. This is not a fatal flaw — but it does increase iter-4's risk profile."
+    },
+    {
+      "id": "E9",
+      "observation": "PRD-002 R-29 reads: 'The chucker hit rate is calibrated so ~25–40 balls returned per 100 fired (PRD-001 §4 base game rate ベース). Tune via pin layout.' The wording 'is calibrated' presupposes a static value set by the designer. Under iter-4 the rate would be player-influenced; R-29's contract becomes ambiguous.",
+      "sourceIds": ["S-prd-002"],
+      "sourceType": "spec",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "high",
+      "families": ["spec"],
+      "scores": { "H1": -1, "H2": 1, "H3": 0, "H4": 0, "H5": 2 },
+      "notes": "Strong evidence for H5 (tension): the C-2 contract literally needs revision. Mitigation in keyJudgment: a C-2 ADR redeclaring ベース as a derived measurement with a layout-tuning target band, before PRD-004 commits."
+    },
+    {
+      "id": "E10",
+      "observation": "Skill §3 (Culture & parlor atmosphere) identifies the 常連 (regular) player archetype as 'know every machine's spec, track ハマり, optimize seating. Want depth and accurate math.' This player archetype is precisely what nail-adjustment serves — depth, machine personality, optimization.",
+      "sourceIds": ["S-skill-pachinko"],
+      "sourceType": "research",
+      "reliability": "A",
+      "credibility": 6,
+      "diagnosticity": "medium",
+      "families": ["spec"],
+      "scores": { "H1": 1, "H2": -1, "H3": 0, "H4": 0, "H5": 0 },
+      "notes": "Evidence against H2 (drift): the chosen direction serves the player archetype the project's own canon-grounded analysis identifies as most valuable. Adding depth where regulars want depth is C-9-SPIRIT-aligned even if C-9-LETTER-stretched."
+    },
+    {
+      "id": "E11",
+      "observation": "Iter-3 PRD-003 R-44 explicitly normalizes text rendering to ≤6 distinct sizes ({14, 18, 22, 32, 48, 96}) to quiet macroquad's font-atlas churn warnings. The iter-3 build did not enforce this — `cargo test` does not check rule R-44; the lint is human-driven. Multiple sizes (14, 16, 18, 20, 22, 24, 28, 32, ...) appear in render.rs.",
+      "sourceIds": ["S-prd-003", "S-render-rs"],
+      "sourceType": "artifact",
+      "reliability": "A",
+      "credibility": 5,
+      "diagnosticity": "low",
+      "families": ["artifact"],
+      "scores": { "H1": 0, "H2": 0, "H3": 0, "H4": 1, "H5": 0 },
+      "notes": "Mild cherrypick evidence — an unenforced PRD rule that was nominally written but never followed through. Iter-4 must NOT add R-N rules that won't be enforced; either add a test/lint or don't make the rule."
+    }
+  ]
+}
