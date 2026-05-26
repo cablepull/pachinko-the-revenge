@@ -8,6 +8,9 @@
 use macroquad::prelude::*;
 use pachinko_core::coordinator::CabinetState;
 
+use crate::persist::SessionSummary;
+use crate::playfield::{PinLayout, KNOBS, available_knob_count, Knob};
+
 /// Draw the back-panel art behind the pin field — the deepest plane.
 /// Drawn before pins so pins overlay it.
 pub fn draw_back_panel(
@@ -447,6 +450,151 @@ pub fn draw_trickle(items: &[(f32, f32, f32, String)]) {
         let m = measure_text(label, None, 14, 1.0);
         draw_text(label, x - m.width * 0.5, *y, 14.0, Color::new(1.0, 0.85, 0.35, alpha));
     }
+}
+
+/// Tuning workshop modal (PRD-004 R-49). Hidden by default; rendered when
+/// `rs.workshop_active` is true. Shows the chapter-available knobs as
+/// horizontal sliders + the predicted ベース confidence interval.
+pub fn draw_workshop(
+    sw: f32, sh: f32,
+    layout: &PinLayout,
+    chapter: u32,
+    predicted_base: Option<(f32, f32)>, // (mean_pct, half_width_pct)
+) {
+    // Backdrop
+    draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.65));
+
+    let modal_x = sw * 0.30;
+    let modal_y = sh * 0.22;
+    let modal_w = sw * 0.40;
+    let modal_h = sh * 0.56;
+
+    // Panel
+    draw_rectangle(modal_x + 6.0, modal_y + 6.0, modal_w, modal_h, Color::new(0.0, 0.0, 0.0, 0.55));
+    draw_rectangle(modal_x, modal_y, modal_w, modal_h, Color::from_rgba(20, 12, 28, 250));
+    draw_rectangle_lines(modal_x, modal_y, modal_w, modal_h, 2.0, Color::from_rgba(243, 181, 74, 255));
+    draw_rectangle(modal_x, modal_y, modal_w, 4.0, Color::from_rgba(243, 181, 74, 255));
+
+    // Title
+    draw_text("釘調整  ::  TUNING WORKSHOP",
+              modal_x + 16.0, modal_y + 32.0, 22.0, Color::from_rgba(243, 181, 74, 255));
+    draw_text(&format!("chapter {chapter}  ::  {} knob{} available",
+                       available_knob_count(chapter),
+                       if available_knob_count(chapter) == 1 { "" } else { "s" }),
+              modal_x + 16.0, modal_y + 54.0, 14.0, Color::new(0.7, 0.7, 0.8, 0.8));
+
+    // Predicted ベース
+    let base_y = modal_y + modal_h - 90.0;
+    if let Some((mean, half)) = predicted_base {
+        let label = format!("predicted  ベース  {:.1}%  ±  {:.1}%", mean, half);
+        let _ = label.clone();
+        draw_text(&label, modal_x + 16.0, base_y, 18.0, Color::from_rgba(120, 200, 255, 240));
+    } else {
+        draw_text("predicted  ベース   . . . probing . . .",
+                  modal_x + 16.0, base_y, 18.0, Color::new(0.5, 0.5, 0.6, 0.8));
+    }
+
+    // Sliders
+    let n = available_knob_count(chapter);
+    let row_h: f32 = 56.0;
+    for i in 0..n {
+        let meta = &KNOBS[i];
+        let v = layout.knobs[i];
+        let row_y = modal_y + 80.0 + i as f32 * row_h;
+        draw_text(meta.label, modal_x + 12.0, row_y + 14.0, 14.0, Color::from_rgba(200, 220, 240, 255));
+        draw_text(&format!("{v:+.2}"), modal_x + modal_w - 60.0, row_y + 14.0, 14.0, Color::from_rgba(200, 220, 240, 255));
+        // Slider bar
+        let bar_x = modal_x + 12.0;
+        let bar_w = modal_w - 24.0;
+        let bar_y = row_y + 22.0;
+        let bar_h = 16.0;
+        draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::from_rgba(30, 20, 50, 255));
+        // Center mark
+        draw_line(bar_x + bar_w * 0.5, bar_y - 2.0, bar_x + bar_w * 0.5, bar_y + bar_h + 2.0, 1.0, Color::new(0.5, 0.5, 0.6, 0.6));
+        // Handle
+        let h_x = bar_x + bar_w * (v * 0.5 + 0.5);
+        let h_w = 18.0;
+        draw_rectangle(h_x - h_w * 0.5, bar_y - 3.0, h_w, bar_h + 6.0, Color::from_rgba(243, 181, 74, 255));
+        draw_rectangle_lines(h_x - h_w * 0.5, bar_y - 3.0, h_w, bar_h + 6.0, 1.0, Color::from_rgba(120, 80, 30, 255));
+    }
+
+    // Hint
+    draw_text("press  T  or  ESC  to close",
+              modal_x + 16.0, modal_y + modal_h - 18.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.5));
+    let _ = Knob::LeftFunnelTilt; // keep import alive
+}
+
+/// Session-end summary screen (PRD-004 R-52). Replaces the cabinet on R.
+pub fn draw_session_summary(sw: f32, sh: f32, summary: &SessionSummary, yen_per_ball: u32) {
+    clear_background(Color::from_rgba(6, 4, 12, 255));
+    let card_x = sw * 0.18;
+    let card_y = sh * 0.12;
+    let card_w = sw * 0.64;
+    let card_h = sh * 0.76;
+    draw_rectangle(card_x + 8.0, card_y + 8.0, card_w, card_h, Color::new(0.0, 0.0, 0.0, 0.55));
+    draw_rectangle(card_x, card_y, card_w, card_h, Color::from_rgba(20, 12, 28, 252));
+    draw_rectangle_lines(card_x, card_y, card_w, card_h, 2.0, Color::from_rgba(243, 181, 74, 255));
+    draw_rectangle(card_x, card_y, card_w, 4.0, Color::from_rgba(243, 181, 74, 255));
+
+    draw_text("SESSION  COMPLETE",
+              card_x + 30.0, card_y + 50.0, 32.0, Color::from_rgba(243, 181, 74, 255));
+    draw_text("press  R  again  to  start  a  fresh  session",
+              card_x + 30.0, card_y + 78.0, 14.0, Color::new(0.7, 0.7, 0.8, 0.8));
+
+    let minutes = summary.duration_ms / 60_000;
+    let seconds = (summary.duration_ms % 60_000) / 1000;
+    let lines = [
+        format!("duration            {:02}:{:02}", minutes, seconds),
+        format!("balls fired        {:>7}        ¥{}", summary.balls_fired, summary.balls_fired as u64 * yen_per_ball as u64),
+        format!("balls won          {:>7}        ¥{}", summary.balls_won, summary.balls_won * yen_per_ball as u64),
+        format!("net                                ¥{}", if summary.net_yen >= 0 { format!("+{}", summary.net_yen) } else { summary.net_yen.to_string() }),
+        format!("highest chapter    {:>2}", summary.highest_chapter),
+        format!("longest dry streak {:>4} spins", summary.longest_dry_streak),
+        format!("rarest reach       {}", summary.rarest_reach_tier.as_deref().unwrap_or("(none)")),
+    ];
+    let mut y = card_y + 130.0;
+    for line in &lines {
+        draw_text(line, card_x + 30.0, y, 20.0, Color::from_rgba(220, 220, 240, 240));
+        y += 32.0;
+    }
+
+    // Narrative lines
+    if !summary.narrative_lines.is_empty() {
+        y += 12.0;
+        draw_text("STORY  OF  THIS  SESSION",
+                  card_x + 30.0, y, 16.0, Color::from_rgba(199, 152, 88, 255));
+        y += 24.0;
+        for line in &summary.narrative_lines {
+            draw_text(line, card_x + 30.0, y, 18.0, Color::from_rgba(180, 200, 220, 250));
+            y += 26.0;
+        }
+    }
+}
+
+/// Welcome-back card (PRD-004 R-53). One-time overlay on session start
+/// when prior session was within the 7-day window.
+pub fn draw_welcome_back(sw: f32, sh: f32, summary: &SessionSummary, yen_per_ball: u32) {
+    draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.75));
+    let card_x = sw * 0.25;
+    let card_y = sh * 0.25;
+    let card_w = sw * 0.50;
+    let card_h = sh * 0.40;
+    draw_rectangle(card_x + 6.0, card_y + 6.0, card_w, card_h, Color::new(0.0, 0.0, 0.0, 0.55));
+    draw_rectangle(card_x, card_y, card_w, card_h, Color::from_rgba(20, 12, 28, 253));
+    draw_rectangle_lines(card_x, card_y, card_w, card_h, 2.0, Color::from_rgba(243, 181, 74, 255));
+    draw_rectangle(card_x, card_y, card_w, 4.0, Color::from_rgba(243, 181, 74, 255));
+
+    draw_text("WELCOME  BACK",
+              card_x + 24.0, card_y + 42.0, 26.0, Color::from_rgba(243, 181, 74, 255));
+    draw_text(&format!("last session: chapter {}", summary.highest_chapter),
+              card_x + 24.0, card_y + 78.0, 18.0, Color::from_rgba(220, 220, 240, 240));
+    let _ = yen_per_ball;
+    draw_text(&format!("net: ¥{}", if summary.net_yen >= 0 { format!("+{}", summary.net_yen) } else { summary.net_yen.to_string() }),
+              card_x + 24.0, card_y + 102.0, 18.0, Color::from_rgba(220, 220, 240, 240));
+    draw_text(&format!("longest dry streak: {} spins", summary.longest_dry_streak),
+              card_x + 24.0, card_y + 126.0, 18.0, Color::from_rgba(220, 220, 240, 240));
+    draw_text("your tuning is preserved.  press SPACE / ENTER / CLICK to begin.",
+              card_x + 24.0, card_y + card_h - 30.0, 14.0, Color::from_rgba(180, 200, 220, 220));
 }
 
 /// Marquee title strip — a thin row at the very top of the cabinet with the

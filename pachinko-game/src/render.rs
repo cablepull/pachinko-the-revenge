@@ -12,7 +12,7 @@ use pachinko_core::coordinator::CabinetState;
 use pachinko_core::outcome::ReachTier;
 
 use crate::ball::{Ball, BallState, Pin, Playfield};
-use crate::playfield;
+use crate::playfield::{self, PinLayout};
 use crate::scene;
 
 pub struct RenderState {
@@ -59,6 +59,19 @@ pub struct RenderState {
     pub data_lamp_visible: bool,
     /// Glow-pulse decay when there's new info to see.
     pub data_lamp_glow_t: f32,
+
+    // ---- Iter 4: tuning workshop, session summary, welcome-back ----
+    /// Tuning workshop modal (PRD-004 R-49). Hidden by default.
+    pub workshop_active: bool,
+    pub workshop_drag_knob: Option<usize>,
+    /// Predicted ベース for the current layout (R-48). (mean_pct, half_width_pct).
+    pub workshop_predicted_base: Option<(f32, f32)>,
+    /// Welcome-back card (R-53). One-time at session start if prior session was recent.
+    pub welcome_back_active: bool,
+    pub welcome_back_summary: Option<crate::persist::SessionSummary>,
+    /// Session-end summary screen (R-52). Replaces cabinet on R reset.
+    pub session_summary_active: bool,
+    pub session_summary: Option<crate::persist::SessionSummary>,
 }
 
 #[derive(Clone, Copy)]
@@ -100,6 +113,13 @@ impl RenderState {
             trickle: Vec::new(),
             data_lamp_visible: false,
             data_lamp_glow_t: 0.0,
+            workshop_active: false,
+            workshop_drag_knob: None,
+            workshop_predicted_base: None,
+            welcome_back_active: false,
+            welcome_back_summary: None,
+            session_summary_active: false,
+            session_summary: None,
         }
     }
 
@@ -251,7 +271,15 @@ pub fn draw_cabinet(
     kakuhen_streak: u32,
     yen_per_ball: u32,
     total_spins: u64,
+    layout: &PinLayout,
 ) {
+    // ---- Session summary takes over the whole canvas (PRD-004 R-52) ----
+    if rs.session_summary_active {
+        if let Some(s) = &rs.session_summary {
+            scene::draw_session_summary(screen_width(), screen_height(), s, yen_per_ball);
+            return;
+        }
+    }
     clear_background(Color::from_rgba(8, 6, 16, 255));
 
     let sw = screen_width();
@@ -482,10 +510,10 @@ pub fn draw_cabinet(
     // ---- ALWAYS-VISIBLE P/L INDICATOR (PRD-003 R-40) ----
     draw_pl_indicator(sw, pl_yen);
 
-    // ---- STREAK MULTIPLIER (PRD-003 R-42) — visible only during a kakuhen chain ----
-    if kakuhen_streak >= 2 {
-        draw_streak_multiplier(sw, sh, kakuhen_streak, get_time());
-    }
+    // ---- STREAK MULTIPLIER — removed per PRD-004 R-56 ("no teeth → drop").
+    // The chained-JP count is still tracked for the session summary; the visual
+    // is gone (skill §11: a cosmetic counter that adds nothing dilutes the signal).
+    let _ = kakuhen_streak;
 
     // ---- CHUCKER HIT FLASHES (PRD-003 R-38) ----
     for (fx, fy, life) in &rs.chucker_flashes {
@@ -561,6 +589,18 @@ pub fn draw_cabinet(
     // State debug strip — only when data lamp is visible (keep clean by default)
     if rs.data_lamp_visible {
         draw_text(&format!("state: {:?}", cab_state), 14.0, 22.0, 14.0, Color::new(0.5, 0.7, 1.0, 0.7));
+    }
+
+    // ---- Tuning workshop modal (PRD-004 R-49). Drawn last so it overlays. ----
+    if rs.workshop_active {
+        scene::draw_workshop(screen_width(), screen_height(), layout, unlocked_chapter, rs.workshop_predicted_base);
+    }
+
+    // ---- Welcome-back card (PRD-004 R-53) ----
+    if rs.welcome_back_active {
+        if let Some(s) = &rs.welcome_back_summary {
+            scene::draw_welcome_back(screen_width(), screen_height(), s, yen_per_ball);
+        }
     }
 }
 

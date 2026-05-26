@@ -149,6 +149,33 @@
         <h2>Playable iterations</h2>
         <ul class="iterations">
             <li>
+                <a class="title-link" href="iteration4/">Iteration 4 &nbsp;—&nbsp; 釘調整 nail-adjustment + contextual minimalism</a>
+                <div class="meta">2026-05-25 · ~632 KB WASM · player tunes the machine</div>
+                <p class="desc">
+                    Built around the iter-3 critique that the cabinet had no depth-axis
+                    input. v0.4 adds <b>釘調整 (nail-adjustment)</b>: at chapter 2+, press
+                    <kbd>T</kbd> to open the tuning workshop, drag six pin-cluster knobs,
+                    and see the predicted ベース as an honest confidence interval. Tuning
+                    persists across sessions via localStorage. The default canvas is
+                    contextually minimal — the cosmetic streak multiplier is gone, the
+                    P/L strip became floaters off the chucker, the data lamp is opt-in.
+                    On <kbd>R</kbd> the session-end summary appears with duration, balls
+                    fired/won, longest dry streak, rarest reach, and narrative lines.
+                    Returning within 7 days shows a welcome-back card with your prior
+                    tuning intact. Driven by
+                    <a href="https://github.com/cablepull/pachinko-the-revenge/tree/main/audits/audit-002-iter4-design-direction-2026-05-25" style="color:#c79858">audit-002</a>
+                    (5-hypothesis ACH across fit/posthoc/cherrypick/drift/tension tags)
+                    and new constraints C-19 (釘調整) + C-20 (contextual minimalism).
+                </p>
+                <div class="tags">
+                    <span>Rust</span><span>macroquad</span><span>WASM</span>
+                    <span>釘調整 nail-adjustment</span><span>quad-storage persistence</span>
+                    <span>session continuity</span><span>C-19 / C-20</span>
+                </div>
+                <a class="play-cta" href="iteration4/">Play →</a>
+            </li>
+
+            <li>
                 <a class="title-link" href="iteration3/">Iteration 3 &nbsp;—&nbsp; every event earns its celebration</a>
                 <div class="meta">2026-05-25 · ~509 KB WASM · cabinet depth, event animations, economy</div>
                 <p class="desc">
@@ -215,16 +242,15 @@
             </li>
 
             <li class="placeholder">
-                <div class="title">Iteration 4 &nbsp;—&nbsp; (planned)</div>
+                <div class="title">Iteration 5 &nbsp;—&nbsp; (planned)</div>
                 <div class="meta">TBD</div>
                 <p class="desc">
-                    Likely candidates: CJK-capable font subset (so HESO / 確変 / 大当たり
-                    render correctly), BGM crossfade primitive (instead of the current
-                    hard-cut), voiced reach cinematics, localStorage persistence on WASM,
-                    story-bible writer's pass to fill the reach beat scripts, nail-
-                    adjustment 釘調整 as a player-controllable gameplay lever, the long
-                    confirmed-reach cinematic, and chasing PRD-002 R-29's 25–40% chucker
-                    rate (iter 3 measured ~15% — still below the band).
+                    Salvage candidates deferred from iter 4: environmental-cue reach
+                    signalling (back-panel mutations instead of banner overlays),
+                    BGM crossfade primitive, CJK subset font, voiced reach cinematics,
+                    chapter-scaled ST window, engineered near-miss visualization. Also:
+                    skill §14 test 4 (2-hour pacing) and test 5 (leave-on-your-own)
+                    against a real human playtest.
                 </p>
             </li>
         </ul>
