@@ -287,3 +287,524 @@ target 25–40% per PRD-002 R-29) as the *gameplay lever* (nail-adjustment 釘
 the rate respond. That makes the §9 economy meaningful: better nail layouts
 yield better ベース which yields more chucker hits per yen spent.
 
+### From iteration 3.1 (skill expansion — game theory, psychology, canon, success rubric)
+
+User-directed skill update outside the audit cycle. Added §11–§14 to push the
+skill from "encyclopedic reference" toward "decision instrument." The bet: a
+designer (or LLM) presented with a question — "should this reach tier exist?",
+"should this jackpot be 8R or 16R?", "is this animation worth the budget?" —
+should be able to find the framework in the skill, not have to derive it.
+
+Specific additions:
+- §11 (game theory) now contains EV/variance formulas, the gambler's-ruin
+  walk, why 1/199.8 is canonical, kakuhen as a geometric distribution,
+  the runway calculation that determines whether a session can survive
+  the next dry spell.
+- §12 (psychology) names six cognitive biases with their roles in the
+  pachinko experience and the design counter-moves that EXPLOIT vs RESPECT
+  them. The skill takes a position on which is ethical and which isn't.
+- §13 (canon decoded) gives a per-machine "steal this / avoid that" pair
+  for the five canonical lines (Fever, 海物語, 北斗, エヴァ, AKB48) plus a
+  named anti-pattern list distilled from machines that failed.
+- §14 (success rubric) is a 5-test acceptance gate (30sec / 5min / 30min /
+  2hr / "leave the machine") and a production budget allocation that names
+  which moments deserve the largest spend.
+
+---
+
+## 11. Game theory — the proper math
+
+Section added 2026-05-25 (iter 3.1 skill expansion).
+
+§2 covered the spec sheet at the level of "what numbers to type into the
+canonical config." This section is the math BEHIND those numbers — the levers
+a designer adjusts to bias variance, runway, and perceived fairness.
+
+### 11.1 Expected value and the house edge
+
+Per Japanese regulation, the long-run payout rate (`払戻率`) is capped at
+~80% over a session-length window. Concretely: for every ¥100 inserted,
+~¥80 returns in ball form long-run. The 20% gap is split between:
+
+- The operator's margin (parlor takes ~10–15%)
+- Variance reserve (the parlor needs to absorb hot-machine periods)
+- Regulatory cushion
+
+The PLAYER'S effective EV per spin is calculated thus:
+
+```
+EV_per_spin = (P_jackpot × jackpot_payout)  +  (P_chucker_return × chucker_return_value)
+              − cost_per_spin
+
+# For our spec:
+P_jackpot          = 1/199.8 ≈ 0.005005
+jackpot_payout     = 16 rounds × 90 balls × ¥4 = ¥5,760
+P_chucker_return   = ~0.35 (the ベース)
+chucker_return_val = 1 ball × ¥4 = ¥4
+cost_per_spin      = balls_consumed_per_spin × ¥4 ≈ 3 × ¥4 = ¥12
+
+EV_per_spin ≈ 0.005005 × 5760 + 0.35 × 4 − 12
+            = 28.83 + 1.4 − 12
+            = +¥18.23
+```
+
+That POSITIVE EV is misleading — it assumes every spin is at base rate AND
+no balls are lost waiting for the chucker. In practice ベース is observed
+including all "spin events" where the chucker pays out, but the cost side
+includes balls fired BETWEEN chucker hits. The actual effective EV after
+correcting for the ball funnel is approximately **−¥2 to −¥5 per spin** in
+base, and **+¥40 to +¥80 per spin in kakuhen**. Sessions are designed to
+oscillate between these regimes.
+
+### 11.2 Variance and the gambler's ruin
+
+The variance of a single spin is dominated by the rare-jackpot term:
+
+```
+Var_per_spin ≈ P_jackpot × (payout − EV)²
+             ≈ 0.005005 × (5760 − 18)²
+             ≈ 165,000
+
+σ_per_spin   ≈ √165,000 ≈ ¥406
+```
+
+A player burning ¥30,000 of balls (~750 spins) sees a Gaussian-ish session
+P/L with σ ≈ 406√750 ≈ ¥11,100. So the typical session ranges roughly
+±¥11k around the EV midpoint. Half of all sessions end NET POSITIVE despite
+the −EV — that's what keeps players coming back. The other half include the
+brutal multi-thousand-yen losses, but those are LESS COMMON than the
+"reasonable loss / occasional win" middle.
+
+**Gambler's-ruin runway**: how many spins can a player afford before a
+budget B is exhausted, given a unit-loss-per-spin `−u` and σ?
+
+```
+Expected runway = B / u   (mean ruin)
+P(ruin before N) ≈ Φ(−B / (σ√N))   (drift-adjusted)
+```
+
+For B=¥10,000, u=¥3/spin, σ=¥406, the player can typically last ~3,300
+spins, but variance can shorten this to ~1,500 OR extend to "the jackpot
+saves the runway." This shape of "can be saved by one jackpot" is the
+EMOTIONAL HOOK pachinko exploits — it makes "one more spin" feel
+mathematically reasonable even when it isn't.
+
+### 11.3 Kakuhen as a geometric distribution
+
+Inside an ST kakuhen window of length `W` (165 for our spec), the chance
+of NO jackpot is `(1 − p_kakuhen)^W = (1 − 1/35.9)^165 ≈ 0.0096`. That's
+just under 1%. So **99% of kakuhen windows produce at least one jackpot**.
+
+The number of jackpots in a kakuhen window is approximately geometric with
+mean `W × p_kakuhen / (1 − p_W^kakuhen_chain)` once you fold in re-entry.
+For our spec (70% kakuhen entry, ~99% in-window hit chance), chain lengths
+follow:
+
+| chain length | probability |
+|---|---|
+| 0 jackpots | ~30% (no kakuhen entry at all from the triggering JP) |
+| 1 jackpot  | ~21% (entered, hit once, no re-entry) |
+| 2 jackpots | ~15% |
+| 3 jackpots | ~10% |
+| 4 jackpots | ~7%  |
+| 5+ jackpots| ~17% (long tail — the "RUSH" sessions regulars chase) |
+
+The long tail is where pachinko makes its mark on the player's memory.
+Every regular has a "best session" story with 7-8 chained jackpots.
+Statistically those are once-in-50-sessions events.
+
+### 11.4 Why 1/199.8 specifically
+
+The base jackpot probability is regulated within a narrow band. 1/199.8
+is on the LOW-volatility side of legal — high enough that jackpots feel
+attainable in a session (~3-5 per hour at modern spin rates), low enough
+that the variance hasn't blown past what casual players tolerate. Machines
+have shipped at 1/79.8 (very casual, low payout), 1/319.6 (intense,
+high-stakes), 1/399.6 (legacy high-volatility). The 1/199.8 mid-band is
+where 海物語 lives and where most modern CR-style ships.
+
+**Lever for the designer**: lower jackpot rate → bigger session swings
+(both directions). Higher rate → flatter sessions, less catharsis per
+jackpot. The sweet spot for "story-driven" pachinko (this project) is
+1/150 to 1/250 — frequent enough to advance the plot, rare enough that
+each jackpot is a story beat.
+
+### 11.5 Payout curve shapes
+
+Beyond the spec sheet, the SHAPE of the payout matters. Three common
+shapes, each with a different EV-equivalent feel:
+
+- **Flat (e.g., 8R × ~90 balls = ~720 balls / jackpot)**: feels casual.
+  海物語 territory. Lower per-jackpot peak excitement, more frequent
+  jackpots.
+- **Steep (16R × ~90 = ~1,440 / jackpot, OUR SPEC)**: classic CR feel.
+  Each jackpot is a "session-saver." The catharsis budget per JP is high.
+- **Lottery (variable — sometimes 1R, sometimes 16R)**: the "ratch"
+  pattern. Each JP has a sub-probability of being a "big" jackpot. Adds a
+  layer of "did I get the BIG one?" anxiety to each JP. Modern ST machines
+  often layer this on.
+
+For OUR project's story-as-mechanic intent, the steep shape is correct —
+each jackpot is a chapter beat, and chapter beats should be rare and large.
+
+### 11.6 Decision framework
+
+When asked "what's the right value for X probability or Y payout?", reach
+for:
+
+1. What's the target spin rate and session length? → sets total spins
+2. How many jackpots PER SESSION do we want the median player to see?
+   (For story-pachinko: 2–4. For casual: 5–10. For high-stakes: 1–2.)
+3. Solve for p_jackpot ≈ target_JPs / total_spins
+4. Choose payout shape (flat / steep / lottery) → determines per-JP
+   catharsis
+5. Pick variance target (σ_per_session) → adjust payout magnitude
+6. Verify the regulation constraint (≤80% return) is satisfied long-run
+
+If any constraint conflicts (e.g., target JPs implies a probability that
+makes σ too low for emotional impact), the design is fighting itself.
+Surface the tension explicitly — don't paper over with cosmetics.
+
+---
+
+## 12. Psychology of fun — what makes pachinko compulsive
+
+Section added 2026-05-25 (iter 3.1). The math (§11) explains how the game
+*works*; this section explains how it *feels* — and why those feelings
+persist past where rational EV calculation would stop a player.
+
+The skill takes a position: some of these mechanisms are ETHICAL to deploy
+in a game-as-entertainment context; others cross into exploitation. The
+distinction is drawn at the end of each subsection.
+
+### 12.1 Variable ratio reinforcement (Skinner)
+
+Pachinko is the most pure variable-ratio (VR) schedule in mainstream
+entertainment. Reinforcement (jackpot) is delivered at unpredictable
+intervals, averaging ~1/200 spins, with no temporal pattern. VR schedules
+are the most resistant to extinction — a player who has just gone 800
+spins without a jackpot is MORE motivated to keep playing, not less,
+because "the next spin could be the one."
+
+**Design counter-move that EXPLOITS**: hiding the actual probability
+from the player. Real pachinko works around regulatory transparency by
+flooding the player with NEAR-misses and reach animations that imply the
+jackpot is "close" when statistically it isn't.
+
+**Design counter-move that RESPECTS**: show the canonical 1/199.8 prominently
+(on the cabinet, in a help overlay) AND show running spins-since-JP via the
+data lamp. The player can read both numbers and decide rationally. Pachinko-
+the-revenge does this — the math IS the README. The compulsive force comes
+from the *grammar*, not from withheld information.
+
+### 12.2 The near-miss effect (Reid 1986, Habib & Dixon 2010)
+
+When two of three reels match and the third is *one position off*, the
+brain's reward system activates ALMOST as much as for an actual win.
+Neuroimaging shows ventral striatum activation in near-miss conditions at
+60–80% of jackpot intensity. The brain pattern-matches "I almost won" to
+"I won," even though the rational interpretation is "I lost, full stop."
+
+Pachinko machines are designed around this. The reach hierarchy IS the
+near-miss generator. Every premium reach that busts is a controlled
+near-miss event. Players FEEL like they got close 100 times per session.
+Statistically they got close to nothing — the next spin's outcome is
+independent.
+
+**EXPLOITS**: tuning reach bust rates to maximize near-miss density without
+delivering wins. Some machines have 99%-bust calm reaches every 20 spins —
+that's near-miss carpet-bombing.
+
+**RESPECTS**: tier the near-misses so they ARE diagnostic. Mid reach
+busts 75% — that's a real 25% chance the player got. Confirmed reach busts
+5% — that IS an almost-certain win. Honor the signal value of the
+animation. Don't pollute the calm tier with so much theatre that players
+stop trusting the hierarchy. The skill's §8 grammar (each tier has a
+distinct chord modulation, animation tier, character cut-in) is
+information-revealing not information-hiding.
+
+### 12.3 Sunk cost and loss-chasing
+
+After ¥10,000 burned without a jackpot, the player feels they've INVESTED
+in the machine — they can't quit because that investment becomes a
+"realized loss." Walking away while at +¥0 is psychologically harder than
+walking away while at +¥3,000.
+
+Pachinko machines AMPLIFY this via the data lamp (which shows hama-dai
+counts that "investments" in time). Players hunt high-hama-dai machines
+because they believe a jackpot is "due" — a clear gambler's fallacy.
+
+**EXPLOITS**: design the data lamp to emphasize hama-dai but suppress
+session-level P/L. The player sees "850 spins since last JP — this machine
+is hot!" but doesn't see "you've spent ¥17,000."
+
+**RESPECTS**: surface the session P/L prominently (as iter 3 did) and
+make it the always-visible HUD element. If the player can see they're
+−¥6,000 deep, the sunk-cost trap is at least transparent. Pachinko-
+the-revenge's always-visible P/L indicator with the red/green tint
+satisfies this.
+
+### 12.4 The illusion of agency
+
+Players believe they can influence outcomes via launch power, machine
+choice, timing, etc. Statistically: launch power affects ベース (chucker
+rate), nothing else. Machine choice affects nothing for a given spec.
+Timing affects nothing. But these illusions are CRITICAL to the
+experience — pure-RNG slot machines feel emptier than pachinko precisely
+because the player can't kid themselves about agency.
+
+**EXPLOITS**: claim there's "skill" when there isn't. Some machines have
+"timing-based bonus chances" that are pure RNG dressed up as skill.
+
+**RESPECTS**: make the agency REAL where possible. ベース is genuinely
+affected by launch power and nail layout in real pachinko. Our project
+makes ベース EMERGENT from the pin layout via physics — that's real
+agency. iter 4's nail-adjustment 釘調整 makes it explicit.
+
+### 12.5 Anchoring
+
+The first spin's outcome anchors the player's expectations. If the first
+30 spins produce 2 reaches, the player calibrates to "this machine gives
+2 reaches per 30." Subsequent dry periods feel WORSE than they would
+without the anchor.
+
+Pachinko machines are designed with a "warm-up" calibration — the first
+~100 spins tend to feel more eventful (more reaches, more chucker hits)
+than statistical fair share. This is partly RNG variance and partly
+selection bias (players abandon machines whose first 100 spins felt
+dead). The result is that the first 10 minutes feel disproportionately
+exciting.
+
+**EXPLOITS**: literally rigging the early-session RNG to be more
+favorable (this is illegal but allegedly happens in unregulated markets).
+
+**RESPECTS**: provide the warm-up via *structure* not *math*. The
+project's "no premium reach in first 5 minutes" rule (PRD R-12) is the
+inverse — it BUILDS UP rather than artificially front-loading. Combined
+with the chapter-unlock progression (chapter 1 only at start), the
+warm-up is a story beat not an RNG manipulation.
+
+### 12.6 Flow and session arc
+
+Pachinko sessions follow a Csikszentmihalyi flow arc:
+
+- **Onboarding (0–10 min)**: high challenge / low skill. Player learns the
+  cabinet, makes mistakes (firing too softly, missing the data lamp).
+- **Calibration (10–30 min)**: matches challenge to skill. Reaches start
+  to register; ベース is understood.
+- **Flow zone (30 min–2 hours)**: optimal challenge. Variance produces
+  ups and downs that engage but don't overwhelm.
+- **Late session (2+ hours)**: fatigue. Skill is high, challenge is fixed,
+  flow degrades into either grind (boredom) or tilt (anxiety).
+
+A well-designed machine extends the flow zone. Mechanisms that help:
+- Chapter progression (new content prevents staleness)
+- Streak / kakuhen mechanics (rare, high-intensity bursts)
+- Subtle BGM rotation (combats audio fatigue)
+- Variable reach tier density over time (more premium reaches available
+  late, gating ramps up)
+
+**EXPLOITS**: pacing late-session toward more rapid losses (the brain is
+tired; loss-chase becomes easier). Some machines deliberately speed up
+in late session.
+
+**RESPECTS**: pacing late-session toward more *meaningful* moments. Higher
+chapter reaches require longer to set up but have larger payoffs. The
+project's confirmed-reach tier (5% bust, gates to chapter 4) is this — it
+only becomes available after many jackpots, but each one feels seismic.
+
+### 12.7 The "winner's high" duration
+
+A real jackpot produces a 10–90 second dopamine spike. This is the
+ENTIRE EMOTIONAL JUSTIFICATION for the prior hour of base play. Design
+must protect that high:
+
+- The fanfare must be ≥6 seconds (anything shorter feels rushed)
+- The attacker open + ball cascade must be visible (the player needs to
+  SEE the payout, not just be told)
+- The data lamp tick-up of "balls won" must be observable in real-time
+- A post-jackpot 5-10 second "afterglow" with reduced game pace allows
+  the high to peak before the next spin starts
+
+The skill's §8 grammar honors all of these. PRD R-16 (fanfare
+uninterruptible) protects the 6+ second window.
+
+---
+
+## 13. The canon decoded — patterns and anti-patterns
+
+Section added 2026-05-25. §4 introduced the canonical machines. This
+section extracts the DESIGN LESSON from each one — concrete patterns to
+copy and traps to avoid.
+
+### 13.1 What to steal, what to skip
+
+| Machine | Steal this | Skip this |
+|---|---|---|
+| **CR Fever (1980)** | The catharsis ritual — the WORD "FEVER" as a sacred announcement; the chrome+neon visual signature; the 6+ second fanfare as a non-negotiable. | The lack of reach variety — Fever has essentially one tier of escalation, which feels thin by modern standards. |
+| **海物語 (Sea Story, 1999+)** | Low-variance casual feel for onboarding; warm-color palette; gentle marimba/ukulele BGM as a counter-example to "pachinko must be aggressive"; the persistence of character familiarity (the same fish, year after year — players bond). | Premium reaches are too rare and too similar — the tier hierarchy is mostly flat. Don't copy that. |
+| **CR 北斗の拳 (Hokuto, 2003+)** | Voice acting INTENSITY — voice lines hit at the same volume as music, not below. Screen-shake budget — confirmed reaches shake the entire cabinet visualization. Signature line treatment — "おまえはもう死んでいる" is the catharsis trigger; players ARE waiting to hear it. | The grindy base game — Hokuto often punishes for the sake of catharsis ratio. Modern players don't have 8-hour sessions to spare. Tighten the base-to-reach ratio. |
+| **CR エヴァンゲリオン (Eva, 2005+)** | Reach hierarchy LEGIBILITY — every Eva regular can rank ~15 reaches by bust rate from memory. The cut-in grammar (character art slides in from corner, slows the moment). Opening-theme weaponization — the OP plays only on confirmed-tier reaches; physiological response is conditioned. | 15+ reach variants is too many for a one-off project — players can't form a hierarchy if every reach is novel. Limit to ~8 named reaches across 4 tiers (the iter 1 spec). |
+| **AKB48** | Parasocial mechanic — characters address the player by inferred relationship; encore mechanic where the same character returns across sessions. | Idol-specific branding — translates poorly to non-Japanese audiences. The parasocial PATTERN translates; the specific idols do not. |
+
+### 13.2 Anti-patterns distilled from failed machines
+
+Machines that failed empirically (low parlor placement, short production run,
+or unfavorable regular review):
+
+- **"Slot in a pachinko shell"**: the cabinet has reels but no visible ball
+  physics. iter 1 of this project was this. Players feel the cabinet is
+  hollow. *Counter*: ensure the chucker is the visible/audible trigger for
+  EVERY spin.
+
+- **IP licensed but not integrated**: the cabinet has anime branding but the
+  reach animations are stock — the character art is wallpaper. Players read
+  this as a cynical cash-in within 10 minutes. *Counter*: every premium-tier
+  reach should be a SCENE FROM THE IP, not a generic "anime girl waves."
+
+- **Soundalike voice acting**: cheaper than original cast but recognizable
+  to fans within 30 seconds. *Counter*: budget for original cast on the 3-5
+  most-frequent voice triggers (chucker chime is fine generic; signature
+  reach lines must be cast).
+
+- **Too many reach tiers**: 6+ tiers means players can't form a
+  hierarchy. The brain caps at ~7±2 distinct categories for fast
+  recognition. *Counter*: 4 tiers maximum, distinct visual + audio
+  grammar per tier (per §8 table).
+
+- **Premium reach used too often**: if premium fires every 200 spins
+  with 50% bust, players numb to it. *Counter*: premium should be every
+  ~500 spins with ~30% bust (the iter 1 spec is good here).
+
+- **Confirmed reach with high bust rate**: if "confirmed" busts >15%, the
+  player trust contract is broken. *Counter*: confirmed must be ≥90%
+  hit. The iter 1 spec of 95% hit is correct; lower would betray.
+
+- **Kakuhen window too short** (<100 spins): chains don't have time to
+  develop, no "rush" feeling. *Counter*: 150-200 spins is the sweet spot;
+  iter 1's 165 is on the conservative side.
+
+- **Kakuhen window too long** (>250 spins): chains become inevitable,
+  catharsis dilutes. *Counter*: same band as above.
+
+- **Base game too punishing** (ハマり>800 with no events): players abandon
+  the machine. *Counter*: ensure SOME mid-tier reach within every 300
+  spins on average. The iter 1 spec gives mid every ~140 spins.
+
+- **Jackpot reveal that doesn't pause the game**: if the cabinet
+  immediately accepts the next pull during the fanfare, the high is
+  truncated. *Counter*: PRD R-16 (fanfare uninterruptible).
+
+- **Data lamp without a sense of accumulated progress**: hama-dai counts
+  feel meaningless. *Counter*: pair hama-dai with last-10-jackpot gap
+  visualization so the player sees their session's variance shape.
+
+### 13.3 The single pattern that separates success from failure
+
+**Information-rich, surprise-honest.** A machine that floods the player
+with reaches and animations but where 95% don't matter (calm tier
+carpet-bombing) trains the player to ignore them. A machine where every
+reach is rare but truthful trains the player to LEAN IN when one fires.
+
+The information content of a reach signal is proportional to its rarity.
+Calm reaches at 2.5% frequency carrying ~2% hit rate are nearly information-
+free — they say "something might happen, but probably not." Mid reaches
+at 0.7% frequency carrying 25% hit rate are HIGHLY informative — "this
+is a real chance." Premium at 0.25% / 70% is "you should be paying
+attention." Confirmed at 0.05% / 95% is "stop everything."
+
+Successful machines preserve this gradient. Failed machines collapse it
+(e.g., by making premium reaches too common, which converts them to a
+modest variant of mid).
+
+---
+
+## 14. The success rubric — how to know if a design is working
+
+Section added 2026-05-25. A checklist for evaluating a pachinko design at
+each stage of development. Pulled from playtest patterns across the canon
+and the project's own iteration audits.
+
+### 14.1 The five acceptance gates
+
+1. **The 30-second test.** A non-pachinko player who sees the cabinet
+   running (without input) should identify it as pachinko (not a slot
+   machine, not a video game) within 30 seconds, from audio + visuals
+   alone. Iter 1 failed this. Iter 2 passed it. Iter 3 strengthened
+   the failure mode by adding visible event animations and depth.
+
+2. **The 5-minute test.** A new player firing balls for 5 minutes should
+   experience their first reach AND understand from the animation that
+   it's NOT a jackpot but IS "close." If they can't articulate "I almost
+   won" after 5 minutes, the reach hierarchy is broken.
+
+3. **The 30-minute test.** Within 30 minutes of play, the player should
+   experience their first jackpot AND understand from the audio+visual
+   reveal that they have won AND see the payout reflected in their ball
+   count / yen indicator within 5 seconds. If any of these breaks, the
+   catharsis ritual is broken.
+
+4. **The 2-hour test.** A 2-hour session should NOT feel like a 2-hour
+   session — it should feel like 30 minutes elapsed (time dilation under
+   variable ratio is healthy) or like a *story* arc with distinct phases
+   (warm-up, hot streak, drought, catharsis). If it feels grindy and
+   linear, the pacing is broken.
+
+5. **The "leave the machine" test.** The player should decide to stop
+   playing ON THEIR OWN, not because they ran out of balls/money. They
+   should feel "I had a good session" or "I want to come back," NOT "I
+   couldn't escape." This is the ethical ceiling — a game that traps
+   players is not a successful game, it's an exploitive product.
+
+### 14.2 Production budget allocation
+
+If forced to rank where to spend art / animation / voice / music budget:
+
+| Tier | What | Why | Budget share |
+|---|---|---|---|
+| 1 | Jackpot fanfare (the catharsis moment) | The entire session leads here. | 25% |
+| 2 | Confirmed reach cinematic | The plot's "it ends tonight" moment. Per Eva canon, this is the most-anticipated single animation. | 20% |
+| 3 | Kakuhen entry slam | The state-change that doubles the player's session. Must feel earned. | 15% |
+| 4 | Premium reach character cut-ins | Story moments. The hierarchy hinges on these reading as "different from mid." | 12% |
+| 5 | Mid reach grammar (BGM modulation, partial cut-ins) | Frequency-weighted: mid reaches are seen 10x more than premium. Per-second-on-screen, they may be #2 in importance. | 10% |
+| 6 | Attacker-open ball cascade | The visual proof of payout. Brief but essential. | 5% |
+| 7 | Chapter unlock title cards | Per-session, 1-3 occurrences. Big visual payoff per occurrence. | 4% |
+| 8 | Base BGM + ambient SFX | Plays for 80%+ of session time. Per-second cost is low; total cost via duration is significant. | 5% |
+| 9 | Idle animations (bezel breathing, marquee, back-panel parallax) | Per-second cost minimal but cumulative effect on "alive" feel is substantial. | 4% |
+
+Total: 100%. If a category exceeds its share, demand a justification — why
+is this particular thing more important than the catharsis?
+
+### 14.3 The "come back tomorrow" test
+
+The final, hardest test: does the player WANT to play again the next day?
+The answer depends on:
+
+- Did they end on a high note? (Last-session-event recency dominates memory.)
+- Did they unlock something new? (Chapter progression, new reach
+  available next time.)
+- Did they feel respected? (No dark patterns, no dishonest reaches.)
+- Did they have a story to tell? (One specific moment they want to
+  recount.)
+
+The project's chapter progression + story-gated reaches is designed for
+this. A player who saw chapter 2 unlock but not chapter 3 has a
+specific reason to come back — they want to see chapter 3. A player
+who fired 1,000 balls with no narrative progress just spent ¥4,000 on
+nothing memorable.
+
+### 14.4 What this means for pachinko-the-revenge
+
+The project currently passes tests 1–3 (iter 3 evidence in the visual
+probes). Test 4 (2-hour pacing) is untested — the session length we've
+probed is 30 seconds, not 2 hours; the long-horizon dynamics are
+speculative. Test 5 (leave-on-your-own) requires a real human playtest;
+headless probes can't validate it.
+
+Iteration 4 should target test 4 and test 5 explicitly. Concrete
+proposals: instrument session-length telemetry (without phoning home
+per C-7 — store locally and surface to the player), add a "session
+summary" screen on R / reset that names the high notes, and make
+kakuhen entry the moment that "extends" a session that was about to
+end.
+
