@@ -44,6 +44,13 @@ know it's solved (the measurable outcome).
 
 ## Index
 
-| ID | Title | Status | PRD |
-|---|---|---|---|
-| _(none yet)_ | | | |
+| ID | Title | Status | PRD | Effort |
+|---|---|---|---|---|
+| 001 | PinLayout config struct with chapter-gated knobs | Ready | PRD-004 R-46/47 | S–M |
+| 002 | Stock-layout ベース test (MC in [25%, 40%]) | Ready | PRD-004 R-46/57 | S |
+| 003 | Tuning workshop UI (hidden-by-default) | Ready | PRD-004 R-49 | M |
+| 004 | Predicted ベース confidence interval | Ready | PRD-004 R-48 | S–M |
+| 005 | Persistence via quad-storage | Ready | PRD-004 R-54 | M |
+| 006 | Session-end summary screen | Ready | PRD-004 R-52 | S–M |
+| 007 | Welcome-back continuity card | Ready | PRD-004 R-53 | S |
+| 008 | Environmental reach cues + BGM crossfade | Ready | PRD-004 R-50/55 | M |
