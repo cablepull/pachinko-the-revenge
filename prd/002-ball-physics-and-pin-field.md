@@ -132,9 +132,9 @@ Then session.pull_chucker() is NOT called
 
 ---
 
-### Rule R-29: The chucker hit rate is calibrated so ~25–40 balls returned per 100 fired (PRD-001 §4 base game rate ベース)
+### Rule R-29: The canonical *stock* pin layout produces a chucker hit rate of 25–40 balls returned per 100 fired (PRD-001 §4 base game rate ベース)
 
-Per [C-2] / PRD-001 §4. Tune via pin layout.
+Per [C-2] / PRD-001 §4 / **ADR-001**. Tune via pin layout. **Revised in iter 4**: ベース is a *derived measurement* of playfield physics, not a configured spec quantity. The 25–40% band applies to the canonical *stock* layout (no player tuning applied). Under PRD-004 / C-19, player tuning may produce rates outside the band, subject to PinLayout's per-knob bounds.
 
 **Example: Base game rate hits target window**
 ```

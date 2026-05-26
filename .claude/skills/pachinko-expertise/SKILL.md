@@ -287,6 +287,22 @@ target 25–40% per PRD-002 R-29) as the *gameplay lever* (nail-adjustment 釘
 the rate respond. That makes the §9 economy meaningful: better nail layouts
 yield better ベース which yields more chucker hits per yen spent.
 
+### From iteration 4 (釘調整 + contextual minimalism + session continuity)
+
+Iteration 4 implemented the audit-002 synthesis. Five lessons worth carrying forward:
+
+- **The "hidden by default + chapter-gated unlock" pattern composes.** iter 3 hid the data lamp behind a toggle; iter 4 hides the tuning workshop behind a chapter-2 unlock that THEN appears as a tab inside the data lamp. The compounding "earn access by playing" pattern means the cabinet doesn't reveal complexity until the player has demonstrated readiness to see it. The same pattern is available for any future depth: voice-acted reach cinematics could unlock at chapter 3, advanced tuning at chapter 4, a new BGM at chapter 5.
+
+- **Honest CI display is structurally cheaper than a flattering point estimate.** R-48 mandates "17.4% ± 3.2%" not "17.4%". Implementing it required ONE additional MC probe and ONE more text format-string. The cost of *not* doing this would have been the §12.1 EXPLOIT trap — a flattering number on the workshop screen would have undermined every other honest claim the cabinet makes. The cheapest part of an ethical design is often the literal change.
+
+- **`quad-storage` resolves the WASM-persistence question that's been open since iter 1.** Net cost: +25 KB WASM, one new dependency, three test cases. The shim wraps `localStorage` on web and falls back to in-memory on native. Story 005's roundtrip test passes; the welcome-back card works. Lesson: deferred infrastructure decisions get cheaper to make, not more expensive — five iterations of deferral didn't make the choice harder, it made the alternatives more obviously identical.
+
+- **Modal-aware input gating is the right pattern for game-state-driven controls.** iter 4 has three modals (workshop, session summary, welcome-back) that suppress launch input when active. Implementing this as a single `let modals_active = ...; let space_held = ... && !modals_active;` line at the input layer is cleaner than per-modal early-returns. Lesson: keep the input layer thin and gate-aware; let the modals own their dismiss logic.
+
+- **Removing a feature is sometimes the deliverable.** R-56 removed the cosmetic streak multiplier badge. Net delta: −1 render call, −1 visual element. The session summary still tracks the chain count (data preserved). This satisfies skill §11's "no teeth → drop" binary without sacrificing future flexibility. Lesson: a release that REMOVES weak UI is as valuable as one that adds strong UI.
+
+Operational note: magnetfragnet's `check --if-changed` auto-hook fires on every Edit/Write/MultiEdit and on Stop. iter 4's iteration counter accumulation has been entirely automatic since iter 3 close; the `.tmp/mfn.mjs` driver is now retired.
+
 ### From iteration 3.1 (skill expansion — game theory, psychology, canon, success rubric)
 
 User-directed skill update outside the audit cycle. Added §11–§14 to push the
